@@ -399,16 +399,16 @@ local function ShowIntroduction()
     TextStroke.Thickness = 3
     TextStroke.Transparency = 1
     
-    -- Logo da Deal Blox
-    local Logo = Instance.new("ImageLabel", BlurFrame)
-    Logo.Size = UDim2.fromOffset(200, 200)
-    Logo.Position = UDim2.fromScale(0.5, 0.2)
-    Logo.AnchorPoint = Vector2.new(0.5, 0.5)
-    Logo.BackgroundTransparency = 1
-    Logo.Image = "https://cdn.discordapp.com/attachments/1444497780264538252/1488733768444416060/Logo_deal_blox.jpg"
-    Logo.ScaleType = Enum.ScaleType.Fit
-    Logo.ImageTransparency = 1
-    Logo.ZIndex = 10001
+-- Logo da Deal Blox (CORRETO)
+local Logo = Instance.new("ImageLabel", BlurFrame)
+Logo.Size = UDim2.fromOffset(200, 200)
+Logo.Position = UDim2.fromScale(0.5, 0.2)
+Logo.AnchorPoint = Vector2.new(0.5, 0.5)
+Logo.BackgroundTransparency = 1
+Logo.Image = "rbxassetid://121622891926251" -- LOGO DEAL BLOX CORRETA
+Logo.ScaleType = Enum.ScaleType.Fit
+Logo.ImageTransparency = 1
+Logo.ZIndex = 10001
     
     -- Animação de entrada (5 segundos)
     task.spawn(function()
@@ -652,7 +652,7 @@ local BossList = {
 print("✅ DEAL BLOX - PARTE 2/15 CARREGADA")
 
 -- =========================
--- CONFIGURAÇÕES DA GUI
+-- CONFIGURAÇÕES DA GUI (CORES CORRIGIDAS)
 -- =========================
 local GuiConfig = {
     Aberto = false,
@@ -662,19 +662,18 @@ local GuiConfig = {
     TamanhoMaximo = {Width = 800, Height = 600},
     
     Cores = {
-        Primaria = Color3.fromRGB(0, 120, 255), -- Azul
-        Secundaria = Color3.fromRGB(255, 255, 255), -- Branco
-        Fundo = Color3.fromRGB(10, 20, 40), -- Azul escuro
-        FundoTransparente = 0.2, -- 80% visível (20% transparente)
-        AbaAtiva = Color3.fromRGB(0, 150, 255),
-        AbaInativa = Color3.fromRGB(30, 50, 80),
+        Primaria = Color3.fromRGB(46, 99, 184), -- Azul Neon #2e63b8
+        Secundaria = Color3.fromRGB(184, 46, 46), -- Vermelho Neon #b82e2e
+        Fundo = Color3.fromRGB(10, 10, 15), -- Fundo escuro
+        FundoTransparente = 0.2, -- 80% visível
+        AbaAtiva = Color3.fromRGB(46, 99, 184), -- Azul Neon
+        AbaInativa = Color3.fromRGB(30, 30, 40),
         Texto = Color3.fromRGB(255, 255, 255),
-        BotaoAtivo = Color3.fromRGB(0, 200, 100),
+        BotaoAtivo = Color3.fromRGB(46, 99, 184), -- Azul Neon
         BotaoInativo = Color3.fromRGB(60, 60, 80),
-        Borda = Color3.fromRGB(0, 180, 255)
+        Borda = Color3.fromRGB(184, 46, 46) -- Vermelho Neon
     }
 }
-
 -- =========================
 -- CRIAR GUI PRINCIPAL
 -- =========================
@@ -705,7 +704,7 @@ local function CreateMainGui()
     OpenButton.Position = UDim2.new(0, 20, 0.5, -30)
     OpenButton.BackgroundColor3 = GuiConfig.Cores.Primaria
     OpenButton.BorderSizePixel = 0
-    OpenButton.Image = "https://cdn.discordapp.com/attachments/1444497780264538252/1488733768444416060/Logo_deal_blox.jpg"
+    OpenButton.Image = "rbxassetid://121622891926251"
     OpenButton.ScaleType = Enum.ScaleType.Fit
     OpenButton.Active = true
     OpenButton.Draggable = true
@@ -786,14 +785,14 @@ local function CreateMainGui()
     TopCover.BorderSizePixel = 0
     TopCover.ZIndex = 101
     
-    -- Logo Deal Blox na TopBar
-    local Logo = Instance.new("ImageLabel", TopBar)
-    Logo.Size = UDim2.fromOffset(40, 40)
-    Logo.Position = UDim2.fromOffset(10, 5)
-    Logo.BackgroundTransparency = 1
-    Logo.Image = "https://cdn.discordapp.com/attachments/1444497780264538252/1488733768444416060/Logo_deal_blox.jpg"
-    Logo.ScaleType = Enum.ScaleType.Fit
-    Logo.ZIndex = 102
+-- Logo Deal Blox na TopBar
+local Logo = Instance.new("ImageLabel", TopBar)
+Logo.Size = UDim2.fromOffset(40, 40)
+Logo.Position = UDim2.fromOffset(10, 5)
+Logo.BackgroundTransparency = 1
+Logo.Image = "rbxassetid://121622891926251" -- LOGO DEAL BLOX
+Logo.ScaleType = Enum.ScaleType.Fit
+Logo.ZIndex = 102
     
     local LogoCorner = Instance.new("UICorner", Logo)
     LogoCorner.CornerRadius = UDim.new(0.5, 0)
