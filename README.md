@@ -19,7 +19,7 @@ repeat wait() until game:IsLoaded() and game.Players.LocalPlayer
 if not game.PlaceId or (game.PlaceId ~= 2753915549 and game.PlaceId ~= 4442272183 and game.PlaceId ~= 7449423635) then
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "❌ Jogo Inválido",
-        Text = "Este script é apenas para Blox Fruits!",
+        Text = "Este script é apeas para Blox Fruits!",
         Duration = 5
     })
     return
