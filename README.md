@@ -13,18 +13,6 @@
 
 repeat wait() until game:IsLoaded() and game.Players.LocalPlayer
 
--- =========================
--- PROTEÇÃO E VERIFICAÇÃO
--- =========================
-if not game.PlaceId or (game.PlaceId ~= 2753915549 and game.PlaceId ~= 4442272183 and game.PlaceId ~= 7449423635) then
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "❌ Jogo Inválido",
-        Text = "Este script é apenas para Blox Fruits!",
-        Duration = 5
-    })
-    return
-end
-
 -- Verificar se já está rodando
 if _G.DealBloxLoaded then
     warn("⚠️ Deal Blox Scripts já está em execução!")
@@ -49,7 +37,7 @@ local TeleportService = game:GetService("TeleportService")
 local UserInputService = game:GetService("UserInputService")
 
 -- =========================
--- DETECÇÃO DO SEA
+-- DETECÇÃO DO SEA (COM PROTEÇÃO)
 -- =========================
 local function GetCurrentSea()
     local placeId = game.PlaceId
@@ -60,6 +48,7 @@ local function GetCurrentSea()
     elseif placeId == 7449423635 then
         return 3
     end
+    -- SE NÃO RECONHECER, ASSUME SEA 1
     return 1
 end
 
@@ -137,6 +126,7 @@ _G.DealBlox = {
         
         -- PVP
         SelectedPVPPlayer = "Nenhum",
+        AutoPVP = false,
         AutoAimbot = false,
     },
     
@@ -160,7 +150,7 @@ local function Notify(titulo, texto, duracao)
             Title = titulo,
             Text = texto,
             Duration = duracao,
-            Icon = "rbxassetid://1234567890"
+            Icon = "rbxassetid://18708232212462"
         })
     end)
 end
@@ -346,7 +336,7 @@ local function GetServerTime()
     return string.format("%dh %dM %dS", hours, minutes, seconds)
 end
 
-print("✅ DEAL BLOX - PARTE 1/15 CARREGADA")
+print("✅ DEAL BLOX - PARTE 1/15 CARREGADA (SEM VERIFICAÇÃO DE JOGO)")
 
 -- =========================
 -- TELA DE INTRODUÇÃO BORRADA
