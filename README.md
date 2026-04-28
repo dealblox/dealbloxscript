@@ -1138,7 +1138,70 @@ end
 -- Criar a GUI
 local MainGui, TabFrames = CreateMainGui()
 
+-- =========================
+-- TORNAR VARIÁVEIS GLOBAIS (CORREÇÃO)
+-- =========================
+_G.MainGui = MainGui
+_G.TabFrames = Tabs  -- ATENÇÃO: É "Tabs", não "TabFrames"!
+
+-- Tornar funções globais para as próximas partes
+_G.CreateButton = CreateButton
+_G.CreateToggle = CreateToggle
+_G.CreateDropdown = CreateDropdown
+_G.CreateSlider = CreateSlider
+_G.CreateSection = CreateSection
+_G.CreateLabel = CreateLabel
+_G.SafeTP = SafeTP
+_G.EquipWeapon = EquipWeapon
+_G.ActivateBuso = ActivateBuso
+_G.GetRemote = GetRemote
+_G.Notify = Notify
+_G.Tween = Tween
+_G.FormatNumber = FormatNumber
+_G.GetPlayTime = GetPlayTime
+_G.GetServerTime = GetServerTime
+_G.GetQuestByLevel = GetQuestByLevel
+
+print("✅ VARIÁVEIS GLOBAIS EXPORTADAS!")
+
 print("✅ DEAL BLOX - PARTE 3/15 CARREGADA")
+
+-- =========================
+-- DECLARAR VARIÁVEIS GLOBAIS (CORREÇÃO)
+-- =========================
+
+-- Declarar MainGui e TabFrames como globais se ainda não existirem
+if not MainGui then
+    _G.MainGui = nil
+end
+
+if not TabFrames then
+    _G.TabFrames = {}
+end
+
+-- Criar referências locais
+local MainGui = _G.MainGui
+local TabFrames = _G.TabFrames
+
+-- Verificar se GUI foi criada
+if not MainGui then
+    warn("❌ ERRO: GUI não foi criada! Execute a PARTE 3 primeiro!")
+    return
+end
+
+if not TabFrames or type(TabFrames) ~= "table" then
+    warn("❌ ERRO: TabFrames não existe! Execute a PARTE 3 primeiro!")
+    return
+end
+
+-- Declarar funções como globais
+_G.CreateButton = CreateButton
+_G.CreateToggle = CreateToggle
+_G.CreateDropdown = CreateDropdown
+_G.CreateSlider = CreateSlider
+_G.CreateSection = CreateSection
+_G.CreateLabel = CreateLabel
+
 -- =========================
 -- COMPONENTES DA GUI
 -- =========================
@@ -2496,11 +2559,34 @@ CreateToggle(FarmTab, "▶️ Farm Material Ativo", "AutoFarmMaterial", function
 end)
 
 -- =========================
--- PÁGINA: FARM SEA
+-- PÁGINA: FARM (CORREÇÃO)
 -- =========================
-local FarmSeaTab = TabFrames["Farm Sea"].Frame
+local FarmTab = _G.TabFrames and _G.TabFrames["Farm"] and _G.TabFrames["Farm"].Frame or nil
 
-CreateSection(FarmSeaTab, "Progressão de Sea")
+if not FarmTab then
+    warn("❌ ERRO: Aba Farm não foi criada!")
+    print("Abas disponíveis:")
+    for nome, _ in pairs(_G.TabFrames or {}) do
+        print("  -", nome)
+    end
+    return
+end
+
+CreateSection(FarmTab, "Auto Farm Level")
+
+-- Toggle: Auto Farm
+CreateToggle(FarmTab, "🌾 Auto Farm Level", "AutoFarm", function(enabled)
+    if enabled and _G.DealBlox.Settings.SelectedWeapon == "Nenhum" then
+        Notify("⚠️ Arma não selecionada", "Selecione uma arma em 'Configurações de Farm'!", 3)
+        _G.DealBlox.Settings.AutoFarm = false
+        return
+    end
+    
+    _G.DealBlox.Settings.AutoFarm = enabled
+    _G.DealBlox.TempStates.IsFarming = enabled
+    
+    print("🌾 Auto Farm:", enabled and "ATIVADO" or "DESATIVADO")
+end)
 
 -- Toggle: Auto Sea 2
 if CurrentSea == 1 then
@@ -3990,11 +4076,6 @@ task.spawn(function()
             end)
         end
     end
-end)
-
--- Toggle: Auto Guardar Fruta
-CreateToggle(FrutasTab, "📦 Auto Guardar Fruta no Inventário", "AutoStoreFruit", function(enabled)
-    _G.DealBlox.Settings.AutoStoreFruit = enabled
 end)
 
 -- Sistema Auto Store Fruit
@@ -6985,7 +7066,82 @@ AddLog("✅ COMPLETO", "Deal Blox Scripts 100% carregado e funcional!")
 print("✅ DEAL BLOX - PARTE 15/15 CARREGADA - SCRIPT COMPLETO!")
 print("🎉 TODAS AS 15 PARTES FORAM CARREGADAS COM SUCESSO!")
 print("🚀 SCRIPT 100% FUNCIONAL E PRONTO PARA USO!")
+print("=== DIAGNÓSTICO DEAL BLOX ===")
+
+print("\n1. VARIÁVEIS GLOBAIS:")
+print("  _G.MainGui existe?", _G.MainGui ~= nil)
+print("  _G.TabFrames existe?", _G.TabFrames ~= nil)
+print("  _G.CreateToggle existe?", _G.CreateToggle ~= nil)
+print("  _G.CreateButton existe?", _G.CreateButton ~= nil)
+
+if _G.TabFrames then
+    print("\n2. ABAS CRIADAS:")
+    for nome, tab in pairs(_G.TabFrames) do
+        local childCount = tab.Frame and #tab.Frame:GetChildren() or 0
+        print(string.format("  ✅ %s - %d elementos", nome, childCount))
+    end
+    
+    print("\n3. CONTEÚDO DA ABA FARM:")
+    if _G.TabFrames["Farm"] and _G.TabFrames["Farm"].Frame then
+        local farmTab = _G.TabFrames["Farm"].Frame
+        print("  Total de elementos:", #farmTab:GetChildren())
+        
+        for i, child in ipairs(farmTab:GetChildren()) do
+            if child:IsA("TextButton") or child:IsA("Frame") then
+                local text = child:FindFirstChildWhichIsA("TextLabel")
+                print(string.format("  %d. %s - %s", i, child.ClassName, text and text.Text or child.Name))
+            end
+        end
+    else
+        print("  ❌ ABA FARM NÃO EXISTE!")
+    end
+end
+
+print("\n4. SETTINGS:")
+print("  AutoFarm:", _G.DealBlox.Settings.AutoFarm)
+print("  SelectedWeapon:", _G.DealBlox.Settings.SelectedWeapon)
+print("  FarmDistance:", _G.DealBlox.Settings.FarmDistance)
+
+print("\n=========================")
 
 -- =========================
 -- FIM DO SCRIPT
 -- =========================
+
+-- =========================
+-- RECRIAR ABA FARM (EMERGÊNCIA)
+-- =========================
+task.wait(2)
+
+if _G.TabFrames and _G.TabFrames["Farm"] then
+    local FarmTab = _G.TabFrames["Farm"].Frame
+    
+    -- Limpar aba
+    for _, child in ipairs(FarmTab:GetChildren()) do
+        if not child:IsA("UIListLayout") then
+            child:Destroy()
+        end
+    end
+    
+    -- Recriar conteúdo
+    _G.CreateSection(FarmTab, "Auto Farm Level")
+    
+    _G.CreateToggle(FarmTab, "🌾 Auto Farm Level", "AutoFarm", function(enabled)
+        _G.DealBlox.Settings.AutoFarm = enabled
+        print("Auto Farm:", enabled)
+    end)
+    
+    _G.CreateToggle(FarmTab, "📦 Auto Chest", "AutoChest", function(enabled)
+        _G.DealBlox.Settings.AutoChest = enabled
+        print("Auto Chest:", enabled)
+    end)
+    
+    _G.CreateToggle(FarmTab, "⚡ Fast Attack", "FastAttack", function(enabled)
+        _G.DealBlox.Settings.FastAttack = enabled
+        print("Fast Attack:", enabled)
+    end)
+    
+    print("✅ ABA FARM RECRIADA COM SUCESSO!")
+else
+    warn("❌ Não foi possível recriar a aba Farm!")
+end
