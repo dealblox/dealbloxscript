@@ -1,209 +1,172 @@
 --==================================================
 -- DEAL BLOX
--- MAIN / BOOTSTRAP
--- Responsável apenas por carregar os módulos
+-- MAIN
 --==================================================
 
-repeat task.wait() until game:IsLoaded()
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
-while not LocalPlayer do
+repeat
 	task.wait()
-	LocalPlayer = Players.LocalPlayer
-end
+until game:IsLoaded()
 
---==================================================
--- CONFIGURAÇÃO DO REPOSITÓRIO
---==================================================
+local Players =
+	game:GetService("Players")
+
+local Player =
+	Players.LocalPlayer
+
+while not Player do
+	task.wait()
+
+	Player =
+		Players.LocalPlayer
+end
 
 local BASE_URL =
 	"https://raw.githubusercontent.com/dealblox/dealbloxscript/refs/heads/main/"
 
---==================================================
--- ESTADO GLOBAL
---==================================================
+local Environment =
+	getgenv and getgenv() or _G
 
-local Environment
-
-if getgenv then
-	Environment = getgenv()
-else
-	Environment = _G
-end
-
--- Permite atualizar o script sem precisar
--- sair e entrar novamente no jogo.
-Environment.DealBloxLoading = true
+Environment.DealBloxLoading =
+	true
 
 --==================================================
--- LOG INICIAL
+-- BOOT LOG
 --==================================================
 
-local function BootstrapLog(message)
+local function Log(text)
+
 	print(
 		"[DEAL BLOX / MAIN] "
-		.. tostring(message)
+		..
+		tostring(text)
 	)
 end
 
-local function BootstrapWarn(message)
+local function Warn(text)
+
 	warn(
 		"[DEAL BLOX / MAIN] "
-		.. tostring(message)
+		..
+		tostring(text)
 	)
 end
 
 --==================================================
--- CARREGADOR DE MÓDULOS
+-- LOAD MODULE
 --==================================================
 
 local LoadedModules = {}
 
-local function LoadModule(path, required)
+local function LoadModule(
+	path,
+	required
+)
 
-	BootstrapLog(
-		"Carregando " .. path .. "..."
+	Log(
+		"Carregando "
+		..
+		path
 	)
 
-	--==============================
 	-- DOWNLOAD
-	--==============================
 
 	local downloadSuccess, source =
 		pcall(function()
 
 			return game:HttpGet(
-				BASE_URL .. path
+				BASE_URL
+				..
+				path
 			)
 
 		end)
 
 	if not downloadSuccess then
 
-		BootstrapWarn(
-			"❌ Falha ao baixar: "
-			.. path
+		Warn(
+			"Falha download: "
+			..
+			path
 		)
 
-		BootstrapWarn(source)
+		Warn(source)
 
 		if required then
 			error(
-				"Módulo obrigatório não carregou: "
-				.. path
+				"Falha obrigatória: "
+				..
+				path
 			)
 		end
 
 		return nil
 	end
 
-	--==============================
-	-- VERIFICAÇÃO DO ARQUIVO
-	--==============================
-
-	if not source or source == "" then
-
-		BootstrapWarn(
-			"❌ Arquivo vazio: "
-			.. path
-		)
-
-		if required then
-			error(
-				"Arquivo obrigatório vazio: "
-				.. path
-			)
-		end
-
-		return nil
-	end
-
-	--==============================
-	-- COMPILAÇÃO
-	--==============================
+	-- COMPILAR
 
 	local compiled, compileError =
 		loadstring(source)
 
 	if not compiled then
 
-		BootstrapWarn(
-			"❌ Erro de compilação em: "
-			.. path
+		Warn(
+			"Erro compilação: "
+			..
+			path
 		)
 
-		BootstrapWarn(
+		Warn(
 			compileError
 		)
 
 		if required then
 			error(
-				"Erro de compilação: "
-				.. path
+				compileError
 			)
 		end
 
 		return nil
 	end
 
-	--==============================
-	-- EXECUÇÃO
-	--==============================
+	-- EXECUTAR
 
-	local executeSuccess
-	local result
-
-	if debug and debug.traceback then
-
-		executeSuccess, result =
-			xpcall(
-				compiled,
-				debug.traceback
-			)
-
-	else
-
-		executeSuccess, result =
-			pcall(compiled)
-
-	end
-
-	if not executeSuccess then
-
-		BootstrapWarn(
-			"❌ Erro executando: "
-			.. path
+	local success, result =
+		xpcall(
+			compiled,
+			debug.traceback
 		)
 
-		BootstrapWarn(result)
+	if not success then
+
+		Warn(
+			"Erro módulo: "
+			..
+			path
+		)
+
+		Warn(result)
 
 		if required then
-			error(
-				"Erro executando módulo: "
-				.. path
-			)
+			error(result)
 		end
 
 		return nil
 	end
 
-	--==============================
-	-- SALVAR MÓDULO
-	--==============================
+	LoadedModules[path] =
+		result
 
-	LoadedModules[path] = result
-
-	BootstrapLog(
-		"✅ " .. path
+	Log(
+		"✅ "
+		..
+		path
 	)
 
 	return result
 end
 
 --==================================================
--- INICIALIZAÇÃO
+-- START
 --==================================================
 
 local success, startupError =
@@ -211,12 +174,12 @@ local success, startupError =
 
 		function()
 
-			BootstrapLog(
-				"=============================="
+			Log(
+				"=========================="
 			)
 
-			BootstrapLog(
-				"Iniciando DEAL BLOX..."
+			Log(
+				"Iniciando DEAL BLOX"
 			)
 
 			--==========================================
@@ -235,12 +198,24 @@ local success, startupError =
 					true
 				)
 
-			Debug.Log(
-				"Core carregado."
-			)
+			local State =
+				LoadModule(
+					"core/state.lua",
+					true
+				)
 
 			--==========================================
-			-- COMPONENTES DA INTERFACE
+			-- DATA
+			--==========================================
+
+			local Quests =
+				LoadModule(
+					"data/quests.lua",
+					true
+				)
+
+			--==========================================
+			-- COMPONENTS
 			--==========================================
 
 			local Components =
@@ -248,10 +223,6 @@ local success, startupError =
 					"ui/components.lua",
 					true
 				)
-
-			Debug.Log(
-				"Componentes carregados."
-			)
 
 			--==========================================
 			-- INTERFACE
@@ -263,18 +234,6 @@ local success, startupError =
 					true
 				)
 
-			if
-				type(Interface) ~= "table"
-				or
-				type(Interface.Create) ~= "function"
-			then
-
-				error(
-					"ui/interface.lua não retornou Interface.Create"
-				)
-
-			end
-
 			local App =
 				Interface.Create(
 					Config,
@@ -282,18 +241,8 @@ local success, startupError =
 					Debug
 				)
 
-			if not App then
-				error(
-					"A interface não retornou App."
-				)
-			end
-
-			Debug.Log(
-				"Interface principal criada."
-			)
-
 			--==========================================
-			-- PÁGINA PRINCIPAL
+			-- PRINCIPAL
 			--==========================================
 
 			local Principal =
@@ -301,18 +250,6 @@ local success, startupError =
 					"ui/principal.lua",
 					true
 				)
-
-			if
-				type(Principal) ~= "table"
-				or
-				type(Principal.Create) ~= "function"
-			then
-
-				error(
-					"ui/principal.lua não retornou Principal.Create"
-				)
-
-			end
 
 			Principal.Create(
 				App,
@@ -322,42 +259,88 @@ local success, startupError =
 			)
 
 			--==========================================
-			-- MÓDULOS FUTUROS
+			-- MOTOR FARM
 			--==========================================
 
-			-- Esses arquivos podem existir,
-			-- mas ainda não precisam fazer nada.
+			local FarmModule =
+				LoadModule(
+					"modules/farm.lua",
+					true
+				)
 
-			LoadModule(
-				"data/index.lua",
-				false
-			)
+			local FarmEngine =
+				FarmModule.Create(
+					State,
+					Quests,
+					Debug
+				)
 
-			LoadModule(
-				"modules/index.lua",
-				false
+			--==========================================
+			-- FARM CONFIG UI
+			--==========================================
+
+			local FarmConfig =
+				LoadModule(
+					"ui/farmconfig.lua",
+					true
+				)
+
+			FarmConfig.Create(
+				App,
+				Config,
+				Components,
+				Debug,
+				State
 			)
 
 			--==========================================
-			-- COMPARTILHAR ESTADO
+			-- FARM UI
+			--==========================================
+
+			local FarmUI =
+				LoadModule(
+					"ui/farm.lua",
+					true
+				)
+
+			FarmUI.Create(
+				App,
+				Config,
+				Components,
+				Debug,
+				State,
+				FarmEngine
+			)
+
+			--==========================================
+			-- EXPOR DEAL BLOX
 			--==========================================
 
 			Environment.DealBlox = {
 
-				Config = Config,
+				Config =
+					Config,
 
-				Debug = Debug,
+				Debug =
+					Debug,
 
-				Components = Components,
+				State =
+					State,
 
-				Interface = Interface,
+				Quests =
+					Quests,
 
-				Principal = Principal,
+				Components =
+					Components,
 
-				App = App,
+				App =
+					App,
 
-				Modules = LoadedModules
+				Farm =
+					FarmEngine,
 
+				Modules =
+					LoadedModules
 			}
 
 			Environment.DealBloxLoading =
@@ -366,72 +349,52 @@ local success, startupError =
 			Environment.DealBloxLoaded =
 				true
 
-			--==========================================
-			-- FINAL
-			--==========================================
-
 			Debug.Log(
-				"=============================="
+				"=========================="
 			)
 
 			Debug.Log(
-				"✅ DEAL BLOX CARREGADO!"
+				"✅ DEAL BLOX CARREGADO"
 			)
 
 			Debug.Log(
-				"Site: "
-				.. Config.Site
+				"Auto Farm disponível."
 			)
 
 			Debug.Log(
-				"Discord: "
-				.. Config.Discord
-			)
-
-			Debug.Log(
-				"=============================="
+				"=========================="
 			)
 
 		end,
 
-		function(errorMessage)
-
-			if debug and debug.traceback then
-				return debug.traceback(
-					tostring(errorMessage)
-				)
-			end
-
-			return tostring(errorMessage)
-
-		end
-
+		debug.traceback
 	)
 
 --==================================================
--- ERRO CRÍTICO
+-- ERROR
 --==================================================
 
 if not success then
 
-	Environment.DealBloxLoading = false
-	Environment.DealBloxLoaded = false
+	Environment.DealBloxLoading =
+		false
 
-	BootstrapWarn(
-		"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	Environment.DealBloxLoaded =
+		false
+
+	Warn(
+		"━━━━━━━━━━━━━━━━━━━━━━━━"
 	)
 
-	BootstrapWarn(
-		"❌ FALHA AO INICIAR DEAL BLOX"
+	Warn(
+		"❌ DEAL BLOX NÃO INICIOU"
 	)
 
-	BootstrapWarn(
+	Warn(
 		startupError
 	)
 
-	BootstrapWarn(
-		"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	Warn(
+		"━━━━━━━━━━━━━━━━━━━━━━━━"
 	)
-
-	return
 end
