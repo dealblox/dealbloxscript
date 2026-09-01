@@ -55,28 +55,29 @@ function Farm.Create(
 	-- CONSTANTS
 	--==================================================
 
-	-- Coordenada aproximada apenas para carregar a região
-	-- do Sub Port 01. O destino final NÃO usa mais
-	-- essa posição: o script procura o próprio NPC
-	-- Submarine Worker no mapa.
-	local TIKI_SUBMARINE_FALLBACK =
-		Vector3.new(
+	-- Posição usada por hubs de Auto Farm para acionar
+	-- diretamente a viagem da Tiki para a Submerged.
+	-- O script cruza o oceano no alto e depois faz um
+	-- SNAP instantâneo para este ponto, evitando tween
+	-- vertical através da água.
+	local TIKI_SUBMARINE_CFRAME =
+		CFrame.new(
 			-16269.7041,
-			25.2288,
-			1373.6596
+			25.2288494,
+			1373.65955,
+			0.997390985,
+			1.47309942e-09,
+			-0.0721890926,
+			-4.00651912e-09,
+			0.99999994,
+			-2.51183763e-09,
+			0.0721890852,
+			5.75363091e-10,
+			0.997390926
 		)
 
 	local TIKI_APPROACH_HEIGHT =
 		180
-
-	local WORKER_APPROACH_HEIGHT =
-		65
-
-	local WORKER_FINAL_OFFSET =
-		7
-
-	local WORKER_SEARCH_TIME =
-		8
 
 	local SAFE_OCEAN_HEIGHT =
 		450
@@ -806,139 +807,6 @@ function Farm.Create(
 			"Indo para Tiki"
 		)
 
-		-- Primeiro: chega ALTO na região da Tiki,
-		-- sem descer perto da água.
-		local tiki =
-			FindTikiLocation()
-
-		local tikiPosition =
-			nil
-
-		if tiki then
-			if tiki:IsA(
-				"BasePart"
-			) then
-				tikiPosition =
-					tiki.Position
-
-			elseif tiki:IsA(
-				"Model"
-			) then
-				local ok,
-					pivot =
-					pcall(function()
-						return tiki:
-							GetPivot()
-					end)
-
-				if ok then
-					tikiPosition =
-						pivot.Position
-				end
-			end
-		end
-
-		tikiPosition =
-			tikiPosition
-			or
-			TIKI_SUBMARINE_FALLBACK
-
-		local highApproach =
-			CFrame.new(
-				tikiPosition.X,
-				math.max(
-					TIKI_APPROACH_HEIGHT,
-					tikiPosition.Y
-						+
-						TIKI_APPROACH_HEIGHT
-				),
-				tikiPosition.Z
-			)
-
-		if
-			not SafeLongTravel(
-				highApproach
-			)
-		then
-			return false
-		end
-
-		if
-			not State.Settings.AutoFarm
-		then
-			return false
-		end
-
-		State:SetRuntime(
-			"Status",
-			"Procurando Submarine Worker"
-		)
-
-		-- A essa altura a região já deve estar carregada.
-		local worker,
-			workerPart =
-			WaitForSubmarineWorker()
-
-		if
-			not worker
-			or
-			not workerPart
-		then
-			-- Aproxima da área conhecida, mas continua
-			-- no alto. Isso ajuda StreamingEnabled a
-			-- carregar o Sub Port sem tocar na água.
-			local fallbackHigh =
-				CFrame.new(
-					TIKI_SUBMARINE_FALLBACK.X,
-					TIKI_SUBMARINE_FALLBACK.Y
-						+
-						TIKI_APPROACH_HEIGHT,
-					TIKI_SUBMARINE_FALLBACK.Z
-				)
-
-			if
-				not SafeLongTravel(
-					fallbackHigh
-				)
-			then
-				return false
-			end
-
-			worker,
-			workerPart =
-				WaitForSubmarineWorker()
-		end
-
-		if
-			not worker
-			or
-			not workerPart
-		then
-			State:SetRuntime(
-				"Status",
-				"NPC do submarino não encontrado"
-			)
-
-			Warning(
-				"O Deal Blox chegou à Tiki, mas não encontrou o Submarine Worker carregado no mapa."
-			)
-
-			return false
-		end
-
-		Log(
-			"✅ Submarine Worker encontrado: "
-			..
-			tostring(
-				worker:GetFullName()
-			)
-		)
-
-		local workerPosition =
-			workerPart.Position
-
-		-- Primeiro alinha X/Z ACIMA do NPC.
-		-- Assim não atravessamos água na altura baixa.
 		local _, _, root =
 			GetCharacter()
 
@@ -946,29 +814,34 @@ function Farm.Create(
 			return false
 		end
 
-		State:SetRuntime(
-			"Status",
-			"Alinhando com submarino"
-		)
+		--==================================================
+		-- 1. CRUZAR O OCEANO NO ALTO
+		--==================================================
 
-		local workerHighY =
+		local targetPosition =
+			TIKI_SUBMARINE_CFRAME.Position
+
+		local highY =
 			math.max(
-				root.Position.Y,
-				workerPosition.Y
+				SAFE_OCEAN_HEIGHT,
+				root.Position.Y
 					+
-					WORKER_APPROACH_HEIGHT
+					LONG_TRAVEL_EXTRA_HEIGHT,
+				targetPosition.Y
+					+
+					TIKI_APPROACH_HEIGHT
 			)
 
-		local aboveWorker =
+		local highTarget =
 			CFrame.new(
-				workerPosition.X,
-				workerHighY,
-				workerPosition.Z
+				targetPosition.X,
+				highY,
+				targetPosition.Z
 			)
 
 		if
-			not TweenTo(
-				aboveWorker
+			not SafeLongTravel(
+				highTarget
 			)
 		then
 			return false
@@ -980,36 +853,14 @@ function Farm.Create(
 			return false
 		end
 
-		-- Depois desce NA VERTICAL até ficar alguns
-		-- studs acima do NPC, que está em área segura.
-		State:SetRuntime(
-			"Status",
-			"Descendo no Sub Port"
-		)
-
-		local nearWorker =
-			CFrame.new(
-				workerPosition
-					+
-					Vector3.new(
-						0,
-						WORKER_FINAL_OFFSET,
-						0
-					)
-			)
-
-		if
-			not TweenTo(
-				nearWorker,
-				LONG_TRAVEL_VERTICAL_SPEED
-			)
-		then
-			return false
-		end
+		--==================================================
+		-- 2. PARAR TWEEN E SNAPAR DIRETO NO SUB PORT
+		--==================================================
 
 		StopTween()
 
-		local _, humanoid, finalRoot =
+		local _, humanoid,
+			finalRoot =
 			GetCharacter()
 
 		if
@@ -1020,23 +871,56 @@ function Farm.Create(
 			return false
 		end
 
+		State:SetRuntime(
+			"Status",
+			"Posicionando no Sub Port"
+		)
+
 		pcall(function()
 			finalRoot.AssemblyLinearVelocity =
 				Vector3.zero
 
 			finalRoot.AssemblyAngularVelocity =
 				Vector3.zero
+
+			finalRoot.CFrame =
+				TIKI_SUBMARINE_CFRAME
 		end)
+
+		-- Não fazemos Tween até Y=25.
+		-- O snap é proposital para não atravessar
+		-- a água durante a descida.
+
+		task.wait(
+			0.15
+		)
+
+		local _, finalHumanoid,
+			checkRoot =
+			GetCharacter()
+
+		if
+			not finalHumanoid
+			or
+			not checkRoot
+		then
+			State:SetRuntime(
+				"Status",
+				"Morreu ao chegar na Tiki"
+			)
+
+			return false
+		end
 
 		local distance =
 			(
-				finalRoot.Position
+				checkRoot.Position
 				-
-				workerPart.Position
+				TIKI_SUBMARINE_CFRAME.Position
 			).Magnitude
 
 		Log(
-			"Distância do Submarine Worker: "
+			"Distância do ponto do submarino: "
 			..
 			string.format(
 				"%.1f",
@@ -1046,14 +930,14 @@ function Farm.Create(
 			" studs"
 		)
 
-		if distance > 25 then
+		if distance > 35 then
 			State:SetRuntime(
 				"Status",
-				"Longe do submarino"
+				"Falha ao posicionar no Sub Port"
 			)
 
 			Warning(
-				"Não consegui chegar perto o bastante do Submarine Worker."
+				"O Deal Blox chegou à Tiki, mas não conseguiu posicionar no ponto do submarino."
 			)
 
 			return false
@@ -1166,53 +1050,147 @@ function Farm.Create(
 
 		StopTween()
 
-		pcall(function()
-			rootBefore.AssemblyLinearVelocity =
-				Vector3.zero
+		local lastError =
+			nil
 
-			rootBefore.AssemblyAngularVelocity =
-				Vector3.zero
-		end)
+		-- Alguns hubs chamam a Remote diretamente depois
+		-- de posicionar no ponto do Sub Port. Fazemos até
+		-- 3 tentativas curtas antes de considerar falha.
+		for attempt = 1, 3 do
+			if
+				not State.Settings.AutoFarm
+			then
+				return false
+			end
 
-		local success, result =
+			local _, currentHumanoid,
+				currentRoot =
+				GetCharacter()
+
+			if
+				not currentHumanoid
+				or
+				not currentRoot
+			then
+				State:SetRuntime(
+					"Status",
+					"Morreu antes do submarino"
+				)
+
+				return false
+			end
+
 			pcall(function()
-				return Remote:
-					InvokeServer(
-						"TravelToSubmergedIsland"
-					)
+				currentRoot.AssemblyLinearVelocity =
+					Vector3.zero
+
+				currentRoot.AssemblyAngularVelocity =
+					Vector3.zero
+
+				currentRoot.CFrame =
+					TIKI_SUBMARINE_CFRAME
 			end)
 
-		if not success then
-			Warn(
-				"Falha ao usar o submarino: "
-				..
-				tostring(result)
+			task.wait(
+				0.10
 			)
+
+			local success, result =
+				pcall(function()
+					return Remote:
+						InvokeServer(
+							"TravelToSubmergedIsland"
+						)
+				end)
+
+			if success then
+				if result ~= nil then
+					Log(
+						"Resposta do submarino (tentativa "
+						..
+						tostring(attempt)
+						..
+						"): "
+						..
+						tostring(result)
+					)
+				end
+			else
+				lastError =
+					result
+
+				Warn(
+					"Falha no submarino, tentativa "
+					..
+					tostring(attempt)
+					..
+					": "
+					..
+					tostring(result)
+				)
+			end
 
 			State:SetRuntime(
 				"Status",
-				"Falha no submarino"
+				"Aguardando Submerged"
 			)
 
-			Warning(
-				"Não consegui acionar o Submarine Worker."
-			)
+			local checkStarted =
+				tick()
 
-			return false
+			while
+				State.Settings.AutoFarm
+				and
+				tick() - checkStarted
+					<
+					2.2
+			do
+				if IsInsideSubmerged(
+					QuestData
+				) then
+					Log(
+						"✅ Submerged Island detectada."
+					)
+
+					return true
+				end
+
+				local _, aliveHumanoid =
+					GetCharacter()
+
+				if not aliveHumanoid then
+					State:SetRuntime(
+						"Status",
+						"Morreu tentando entrar"
+					)
+
+					return false
+				end
+
+				task.wait(
+					0.15
+				)
+			end
 		end
 
-		if result ~= nil then
-			Log(
-				"Resposta do submarino: "
+		if lastError then
+			Warn(
+				"Último erro do submarino: "
 				..
-				tostring(result)
+				tostring(lastError)
 			)
 		end
 
 		State:SetRuntime(
 			"Status",
-			"Aguardando Submerged"
+			"Submerged não detectada"
 		)
+
+		Warning(
+			"O submarino foi acionado, mas a Submerged não foi detectada."
+		)
+
+		return false
 
 		local started =
 			tick()
