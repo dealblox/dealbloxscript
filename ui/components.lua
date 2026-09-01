@@ -1,35 +1,62 @@
 --==================================================
 -- DEAL BLOX
 -- UI / COMPONENTS
--- Componentes reutilizáveis da interface
 --==================================================
 
 local Components = {}
 
 --==================================================
--- CANTO ARREDONDADO
+-- CANTO
 --==================================================
 
 function Components.Corner(parent, radius)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, radius or 8)
-	corner.Parent = parent
+
+	local corner =
+		Instance.new("UICorner")
+
+	corner.CornerRadius =
+		UDim.new(
+			0,
+			radius or 8
+		)
+
+	corner.Parent =
+		parent
 
 	return corner
 end
 
 --==================================================
--- BORDA / STROKE
+-- BORDA
 --==================================================
 
-function Components.Stroke(parent, color, thickness, transparency)
-	local stroke = Instance.new("UIStroke")
+function Components.Stroke(
+	parent,
+	color,
+	thickness,
+	transparency
+)
 
-	stroke.Color = color or Color3.fromRGB(0, 180, 255)
-	stroke.Thickness = thickness or 1
-	stroke.Transparency = transparency or 0
+	local stroke =
+		Instance.new("UIStroke")
 
-	stroke.Parent = parent
+	stroke.Color =
+		color
+		or
+		Color3.fromRGB(
+			0,
+			180,
+			255
+		)
+
+	stroke.Thickness =
+		thickness or 1
+
+	stroke.Transparency =
+		transparency or 0
+
+	stroke.Parent =
+		parent
 
 	return stroke
 end
@@ -38,15 +65,43 @@ end
 -- PADDING
 --==================================================
 
-function Components.Padding(parent, left, right, top, bottom)
-	local padding = Instance.new("UIPadding")
+function Components.Padding(
+	parent,
+	left,
+	right,
+	top,
+	bottom
+)
 
-	padding.PaddingLeft = UDim.new(0, left or 0)
-	padding.PaddingRight = UDim.new(0, right or 0)
-	padding.PaddingTop = UDim.new(0, top or 0)
-	padding.PaddingBottom = UDim.new(0, bottom or 0)
+	local padding =
+		Instance.new("UIPadding")
 
-	padding.Parent = parent
+	padding.PaddingLeft =
+		UDim.new(
+			0,
+			left or 0
+		)
+
+	padding.PaddingRight =
+		UDim.new(
+			0,
+			right or 0
+		)
+
+	padding.PaddingTop =
+		UDim.new(
+			0,
+			top or 0
+		)
+
+	padding.PaddingBottom =
+		UDim.new(
+			0,
+			bottom or 0
+		)
+
+	padding.Parent =
+		parent
 
 	return padding
 end
@@ -55,21 +110,37 @@ end
 -- TÍTULO
 --==================================================
 
-function Components.Title(parent, text, config)
-	local label = Instance.new("TextLabel")
+function Components.Title(
+	parent,
+	text,
+	config
+)
 
-	label.Parent = parent
+	local label =
+		Instance.new("TextLabel")
 
-	label.Size = UDim2.new(1, -20, 0, 35)
+	label.Parent =
+		parent
 
-	label.BackgroundTransparency = 1
+	label.Size =
+		UDim2.new(
+			1,
+			-20,
+			0,
+			35
+		)
 
-	label.Text = text or "Título"
+	label.BackgroundTransparency =
+		1
+
+	label.Text =
+		text or "Título"
 
 	label.TextColor3 =
 		config.Colors.Text
 
-	label.TextSize = 18
+	label.TextSize =
+		18
 
 	label.Font =
 		Enum.Font.GothamBold
@@ -84,63 +155,43 @@ end
 -- SUBTÍTULO
 --==================================================
 
-function Components.Subtitle(parent, text, config)
-	local label = Instance.new("TextLabel")
+function Components.Subtitle(
+	parent,
+	text,
+	config
+)
 
-	label.Parent = parent
+	local label =
+		Instance.new("TextLabel")
+
+	label.Parent =
+		parent
 
 	label.Size =
-		UDim2.new(1, -20, 0, 25)
+		UDim2.new(
+			1,
+			-20,
+			0,
+			25
+		)
 
-	label.BackgroundTransparency = 1
+	label.BackgroundTransparency =
+		1
 
-	label.Text = text or ""
+	label.Text =
+		text or ""
 
 	label.TextColor3 =
 		config.Colors.SubText
 
-	label.TextSize = 12
+	label.TextSize =
+		12
 
 	label.Font =
 		Enum.Font.Gotham
 
 	label.TextXAlignment =
 		Enum.TextXAlignment.Left
-
-	return label
-end
-
---==================================================
--- TEXTO NORMAL
---==================================================
-
-function Components.Label(parent, text, config)
-	local label = Instance.new("TextLabel")
-
-	label.Parent = parent
-
-	label.Size =
-		UDim2.new(1, -20, 0, 30)
-
-	label.BackgroundTransparency = 1
-
-	label.Text = text or ""
-
-	label.TextColor3 =
-		config.Colors.Text
-
-	label.TextSize = 13
-
-	label.Font =
-		Enum.Font.Gotham
-
-	label.TextWrapped = true
-
-	label.TextXAlignment =
-		Enum.TextXAlignment.Left
-
-	label.TextYAlignment =
-		Enum.TextYAlignment.Top
 
 	return label
 end
@@ -149,23 +200,37 @@ end
 -- CARD
 --==================================================
 
-function Components.Card(parent, config, accentColor)
-	local card = Instance.new("Frame")
+function Components.Card(
+	parent,
+	config,
+	accentColor
+)
 
-	card.Parent = parent
+	local card =
+		Instance.new("Frame")
+
+	card.Parent =
+		parent
 
 	card.BackgroundColor3 =
 		config.Colors.Panel2
 
-	card.BackgroundTransparency = 0.16
+	card.BackgroundTransparency =
+		0.14
 
-	card.BorderSizePixel = 0
+	card.BorderSizePixel =
+		0
 
-	Components.Corner(card, 12)
+	Components.Corner(
+		card,
+		12
+	)
 
 	Components.Stroke(
 		card,
-		accentColor or config.Colors.BlueNeon,
+		accentColor
+			or
+			config.Colors.BlueNeon,
 		1.5,
 		0.15
 	)
@@ -177,35 +242,60 @@ end
 -- BOTÃO
 --==================================================
 
-function Components.Button(parent, text, config, color)
-	local button = Instance.new("TextButton")
+function Components.Button(
+	parent,
+	text,
+	config,
+	color
+)
 
-	button.Parent = parent
+	local button =
+		Instance.new("TextButton")
+
+	button.Parent =
+		parent
 
 	button.Size =
-		UDim2.new(1, 0, 0, 40)
+		UDim2.new(
+			1,
+			0,
+			0,
+			40
+		)
 
 	button.BackgroundColor3 =
-		color or config.Colors.Blue
+		color
+		or
+		config.Colors.Blue
 
-	button.BackgroundTransparency = 0.08
+	button.BackgroundTransparency =
+		0.06
 
-	button.BorderSizePixel = 0
+	button.BorderSizePixel =
+		0
 
-	button.Text = text or "Botão"
+	button.Text =
+		text or "Botão"
 
 	button.TextColor3 =
 		config.Colors.Text
 
-	button.TextSize = 12
+	button.TextSize =
+		12
 
 	button.Font =
 		Enum.Font.GothamBold
 
-	button.AutoButtonColor = true
-	button.Active = true
+	button.AutoButtonColor =
+		true
 
-	Components.Corner(button, 8)
+	button.Active =
+		true
+
+	Components.Corner(
+		button,
+		8
+	)
 
 	return button
 end
@@ -214,41 +304,74 @@ end
 -- SEÇÃO
 --==================================================
 
-function Components.Section(parent, text, config, color)
-	local frame = Instance.new("Frame")
+function Components.Section(
+	parent,
+	text,
+	config,
+	color
+)
 
-	frame.Parent = parent
+	local frame =
+		Instance.new("Frame")
+
+	frame.Parent =
+		parent
 
 	frame.Size =
-		UDim2.new(1, 0, 0, 32)
+		UDim2.new(
+			1,
+			0,
+			0,
+			34
+		)
 
 	frame.BackgroundColor3 =
-		color or config.Colors.Blue
+		color
+		or
+		config.Colors.Blue
 
-	frame.BackgroundTransparency = 0.18
+	frame.BackgroundTransparency =
+		0.20
 
-	frame.BorderSizePixel = 0
+	frame.BorderSizePixel =
+		0
 
-	Components.Corner(frame, 7)
+	Components.Corner(
+		frame,
+		7
+	)
 
-	local label = Instance.new("TextLabel")
+	local label =
+		Instance.new("TextLabel")
 
-	label.Parent = frame
-
-	label.Size =
-		UDim2.new(1, -20, 1, 0)
+	label.Parent =
+		frame
 
 	label.Position =
-		UDim2.fromOffset(10, 0)
+		UDim2.fromOffset(
+			12,
+			0
+		)
 
-	label.BackgroundTransparency = 1
+	label.Size =
+		UDim2.new(
+			1,
+			-24,
+			1,
+			0
+		)
 
-	label.Text = text or "Seção"
+	label.BackgroundTransparency =
+		1
+
+	label.Text =
+		text or ""
 
 	label.TextColor3 =
 		config.Colors.Text
 
-	label.TextSize = 12
+	label.TextSize =
+		12
 
 	label.Font =
 		Enum.Font.GothamBold
@@ -260,22 +383,34 @@ function Components.Section(parent, text, config, color)
 end
 
 --==================================================
--- SCROLLING FRAME
+-- SCROLL
 --==================================================
 
-function Components.Scroll(parent, config)
-	local scroll = Instance.new("ScrollingFrame")
+function Components.Scroll(
+	parent,
+	config
+)
 
-	scroll.Parent = parent
+	local scroll =
+		Instance.new("ScrollingFrame")
+
+	scroll.Parent =
+		parent
 
 	scroll.Size =
-		UDim2.fromScale(1, 1)
+		UDim2.fromScale(
+			1,
+			1
+		)
 
-	scroll.BackgroundTransparency = 1
+	scroll.BackgroundTransparency =
+		1
 
-	scroll.BorderSizePixel = 0
+	scroll.BorderSizePixel =
+		0
 
-	scroll.ScrollBarThickness = 3
+	scroll.ScrollBarThickness =
+		3
 
 	scroll.ScrollBarImageColor3 =
 		config.Colors.BlueNeon
@@ -290,16 +425,25 @@ function Components.Scroll(parent, config)
 end
 
 --==================================================
--- LIST LAYOUT
+-- LISTA
 --==================================================
 
-function Components.List(parent, spacing)
-	local layout = Instance.new("UIListLayout")
+function Components.List(
+	parent,
+	spacing
+)
 
-	layout.Parent = parent
+	local layout =
+		Instance.new("UIListLayout")
+
+	layout.Parent =
+		parent
 
 	layout.Padding =
-		UDim.new(0, spacing or 7)
+		UDim.new(
+			0,
+			spacing or 7
+		)
 
 	layout.SortOrder =
 		Enum.SortOrder.LayoutOrder
@@ -311,20 +455,31 @@ end
 -- AVATAR
 --==================================================
 
-function Components.Avatar(parent, player, config)
-	local avatar = Instance.new("ImageLabel")
+function Components.Avatar(
+	parent,
+	player,
+	config
+)
 
-	avatar.Parent = parent
+	local avatar =
+		Instance.new("ImageLabel")
+
+	avatar.Parent =
+		parent
 
 	avatar.BackgroundColor3 =
 		config.Colors.Panel
 
-	avatar.BorderSizePixel = 0
+	avatar.BorderSizePixel =
+		0
 
 	avatar.ScaleType =
 		Enum.ScaleType.Crop
 
-	Components.Corner(avatar, 999)
+	Components.Corner(
+		avatar,
+		999
+	)
 
 	Components.Stroke(
 		avatar,
@@ -338,7 +493,8 @@ function Components.Avatar(parent, player, config)
 		local success, image =
 			pcall(function()
 
-				return game:GetService("Players")
+				return game
+					:GetService("Players")
 					:GetUserThumbnailAsync(
 						player.UserId,
 						Enum.ThumbnailType.HeadShot,
@@ -347,45 +503,73 @@ function Components.Avatar(parent, player, config)
 
 			end)
 
-		if success and avatar.Parent then
-			avatar.Image = image
-		end
+		if
+			success
+			and
+			avatar.Parent
+		then
 
+			avatar.Image =
+				image
+		end
 	end)
 
 	return avatar
 end
 
 --==================================================
--- STATUS / INFORMAÇÃO
+-- INFO ROW
 --==================================================
 
-function Components.InfoRow(parent, title, value, config)
-	local row = Instance.new("Frame")
+function Components.InfoRow(
+	parent,
+	title,
+	value,
+	config
+)
 
-	row.Parent = parent
+	local row =
+		Instance.new("Frame")
+
+	row.Parent =
+		parent
 
 	row.Size =
-		UDim2.new(1, 0, 0, 27)
+		UDim2.new(
+			1,
+			0,
+			0,
+			27
+		)
 
-	row.BackgroundTransparency = 1
+	row.BackgroundTransparency =
+		1
 
 	local titleLabel =
 		Instance.new("TextLabel")
 
-	titleLabel.Parent = row
+	titleLabel.Parent =
+		row
 
 	titleLabel.Size =
-		UDim2.new(0.45, 0, 1, 0)
+		UDim2.new(
+			0.45,
+			0,
+			1,
+			0
+		)
 
-	titleLabel.BackgroundTransparency = 1
+	titleLabel.BackgroundTransparency =
+		1
 
-	titleLabel.Text = title or ""
+	titleLabel.Text =
+		title or ""
 
 	titleLabel.TextColor3 =
 		config.Colors.SubText
 
-	titleLabel.TextSize = 12
+	titleLabel.TextSize =
+		12
 
 	titleLabel.Font =
 		Enum.Font.Gotham
@@ -396,23 +580,38 @@ function Components.InfoRow(parent, title, value, config)
 	local valueLabel =
 		Instance.new("TextLabel")
 
-	valueLabel.Parent = row
+	valueLabel.Parent =
+		row
 
 	valueLabel.Position =
-		UDim2.new(0.45, 0, 0, 0)
+		UDim2.new(
+			0.45,
+			0,
+			0,
+			0
+		)
 
 	valueLabel.Size =
-		UDim2.new(0.55, 0, 1, 0)
+		UDim2.new(
+			0.55,
+			0,
+			1,
+			0
+		)
 
-	valueLabel.BackgroundTransparency = 1
+	valueLabel.BackgroundTransparency =
+		1
 
 	valueLabel.Text =
-		tostring(value or "—")
+		tostring(
+			value or "—"
+		)
 
 	valueLabel.TextColor3 =
 		config.Colors.Text
 
-	valueLabel.TextSize = 12
+	valueLabel.TextSize =
+		12
 
 	valueLabel.Font =
 		Enum.Font.GothamBold
@@ -427,42 +626,439 @@ end
 -- DIVISOR NEON
 --==================================================
 
-function Components.Divider(parent, config)
-	local holder = Instance.new("Frame")
+function Components.Divider(
+	parent,
+	config
+)
 
-	holder.Parent = parent
+	local holder =
+		Instance.new("Frame")
+
+	holder.Parent =
+		parent
 
 	holder.Size =
-		UDim2.new(1, 0, 0, 2)
+		UDim2.new(
+			1,
+			0,
+			0,
+			2
+		)
 
-	holder.BackgroundTransparency = 1
+	holder.BackgroundTransparency =
+		1
 
-	local blue = Instance.new("Frame")
+	local blue =
+		Instance.new("Frame")
 
-	blue.Parent = holder
+	blue.Parent =
+		holder
 
 	blue.Size =
-		UDim2.new(0.5, 0, 1, 0)
+		UDim2.new(
+			0.5,
+			0,
+			1,
+			0
+		)
 
 	blue.BackgroundColor3 =
 		config.Colors.BlueNeon
 
-	blue.BorderSizePixel = 0
+	blue.BorderSizePixel =
+		0
 
-	local red = Instance.new("Frame")
+	local red =
+		Instance.new("Frame")
 
-	red.Parent = holder
+	red.Parent =
+		holder
 
 	red.Position =
-		UDim2.new(0.5, 0, 0, 0)
+		UDim2.new(
+			0.5,
+			0,
+			0,
+			0
+		)
 
 	red.Size =
-		UDim2.new(0.5, 0, 1, 0)
+		UDim2.new(
+			0.5,
+			0,
+			1,
+			0
+		)
 
 	red.BackgroundColor3 =
 		config.Colors.RedNeon
 
-	red.BorderSizePixel = 0
+	red.BorderSizePixel =
+		0
+
+	return holder
+end
+
+--==================================================
+-- SELECT MENU / DROPDOWN
+--==================================================
+
+function Components.Dropdown(
+	parent,
+	title,
+	options,
+	defaultValue,
+	config,
+	callback
+)
+
+	local holder =
+		Instance.new("Frame")
+
+	holder.Parent =
+		parent
+
+	holder.Size =
+		UDim2.new(
+			1,
+			0,
+			0,
+			72
+		)
+
+	holder.BackgroundTransparency =
+		1
+
+	holder.ClipsDescendants =
+		false
+
+	holder.ZIndex =
+		40
+
+	local label =
+		Instance.new("TextLabel")
+
+	label.Parent =
+		holder
+
+	label.Size =
+		UDim2.new(
+			1,
+			0,
+			0,
+			22
+		)
+
+	label.BackgroundTransparency =
+		1
+
+	label.Text =
+		title or "Selecione"
+
+	label.TextColor3 =
+		config.Colors.SubText
+
+	label.TextSize =
+		12
+
+	label.Font =
+		Enum.Font.GothamBold
+
+	label.TextXAlignment =
+		Enum.TextXAlignment.Left
+
+	label.ZIndex =
+		41
+
+	local selectButton =
+		Instance.new("TextButton")
+
+	selectButton.Parent =
+		holder
+
+	selectButton.Position =
+		UDim2.fromOffset(
+			0,
+			27
+		)
+
+	selectButton.Size =
+		UDim2.new(
+			1,
+			0,
+			0,
+			42
+		)
+
+	selectButton.BackgroundColor3 =
+		config.Colors.Panel2
+
+	selectButton.BorderSizePixel =
+		0
+
+	selectButton.TextColor3 =
+		config.Colors.Text
+
+	selectButton.TextSize =
+		12
+
+	selectButton.Font =
+		Enum.Font.GothamBold
+
+	selectButton.TextXAlignment =
+		Enum.TextXAlignment.Left
+
+	selectButton.ZIndex =
+		42
+
+	Components.Corner(
+		selectButton,
+		8
+	)
+
+	Components.Stroke(
+		selectButton,
+		config.Colors.BlueNeon,
+		1.3,
+		0.1
+	)
+
+	Components.Padding(
+		selectButton,
+		13,
+		13,
+		0,
+		0
+	)
+
+	local listHeight =
+		(#options * 38)
+		+
+		8
+
+	local list =
+		Instance.new("Frame")
+
+	list.Parent =
+		holder
+
+	list.Position =
+		UDim2.fromOffset(
+			0,
+			75
+		)
+
+	list.Size =
+		UDim2.new(
+			1,
+			0,
+			0,
+			listHeight
+		)
+
+	list.BackgroundColor3 =
+		config.Colors.Panel
+
+	list.BackgroundTransparency =
+		0.01
+
+	list.BorderSizePixel =
+		0
+
+	list.Visible =
+		false
+
+	list.ZIndex =
+		100
+
+	Components.Corner(
+		list,
+		8
+	)
+
+	Components.Stroke(
+		list,
+		config.Colors.RedNeon,
+		1.3,
+		0.1
+	)
+
+	local padding =
+		Instance.new("UIPadding")
+
+	padding.Parent =
+		list
+
+	padding.PaddingTop =
+		UDim.new(0, 4)
+
+	padding.PaddingBottom =
+		UDim.new(0, 4)
+
+	padding.PaddingLeft =
+		UDim.new(0, 4)
+
+	padding.PaddingRight =
+		UDim.new(0, 4)
+
+	local layout =
+		Instance.new("UIListLayout")
+
+	layout.Parent =
+		list
+
+	layout.Padding =
+		UDim.new(
+			0,
+			4
+		)
+
+	layout.SortOrder =
+		Enum.SortOrder.LayoutOrder
+
+	local currentValue =
+		defaultValue
+		or
+		options[1]
+
+	local opened =
+		false
+
+	local function refresh()
+
+		selectButton.Text =
+			"  "
+			..
+			tostring(
+				currentValue
+			)
+			..
+			(
+				opened
+				and
+				"                         ▲"
+				or
+				"                         ▼"
+			)
+
+	end
+
+	local function close()
+
+		opened =
+			false
+
+		list.Visible =
+			false
+
+		holder.Size =
+			UDim2.new(
+				1,
+				0,
+				0,
+				72
+			)
+
+		refresh()
+	end
+
+	local function open()
+
+		opened =
+			true
+
+		list.Visible =
+			true
+
+		holder.Size =
+			UDim2.new(
+				1,
+				0,
+				0,
+				80 + listHeight
+			)
+
+		refresh()
+	end
+
+	for index, value in ipairs(
+		options
+	) do
+
+		local option =
+			Instance.new("TextButton")
+
+		option.Parent =
+			list
+
+		option.Size =
+			UDim2.new(
+				1,
+				0,
+				0,
+				34
+			)
+
+		option.BackgroundColor3 =
+			config.Colors.Panel2
+
+		option.BorderSizePixel =
+			0
+
+		option.Text =
+			tostring(value)
+
+		option.TextColor3 =
+			config.Colors.Text
+
+		option.TextSize =
+			12
+
+		option.Font =
+			Enum.Font.Gotham
+
+		option.LayoutOrder =
+			index
+
+		option.ZIndex =
+			101
+
+		Components.Corner(
+			option,
+			6
+		)
+
+		option.Activated:Connect(
+			function()
+
+				currentValue =
+					value
+
+				close()
+
+				if callback then
+
+					callback(
+						value
+					)
+
+				end
+			end
+		)
+	end
+
+	selectButton.Activated:Connect(
+		function()
+
+			if opened then
+				close()
+			else
+				open()
+			end
+		end
+	)
+
+	refresh()
 
 	return holder
 end
