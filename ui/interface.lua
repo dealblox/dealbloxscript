@@ -1,14 +1,9 @@
 --==================================================
 -- DEAL BLOX
 -- UI / INTERFACE
--- Janela principal, abas e navegação
 --==================================================
 
 local Interface = {}
-
---==================================================
--- ABAS DO DEAL BLOX
---==================================================
 
 local TAB_NAMES = {
 	"Principal",
@@ -30,37 +25,48 @@ local TAB_NAMES = {
 	"Configurações"
 }
 
---==================================================
--- CRIAR INTERFACE
---==================================================
+function Interface.Create(
+	Config,
+	Components,
+	Debug
+)
 
-function Interface.Create(Config, Components, Debug)
+	local Players =
+		game:GetService("Players")
 
-	local Players = game:GetService("Players")
-	local TweenService = game:GetService("TweenService")
-	local UserInputService = game:GetService("UserInputService")
-	local CoreGui = game:GetService("CoreGui")
+	local TweenService =
+		game:GetService("TweenService")
 
-	local Player = Players.LocalPlayer
+	local UserInputService =
+		game:GetService("UserInputService")
+
+	local CoreGui =
+		game:GetService("CoreGui")
+
+	local Player =
+		Players.LocalPlayer
 
 	while not Player do
+
 		task.wait()
-		Player = Players.LocalPlayer
+
+		Player =
+			Players.LocalPlayer
 	end
 
-	Debug.Log("Criando interface...")
-
 	--==================================================
-	-- REMOVER INTERFACE ANTIGA
+	-- REMOVER GUI ANTIGA
 	--==================================================
 
 	pcall(function()
 
-		local oldGui =
-			CoreGui:FindFirstChild("DealBlox")
+		local old =
+			CoreGui:FindFirstChild(
+				"DealBlox"
+			)
 
-		if oldGui then
-			oldGui:Destroy()
+		if old then
+			old:Destroy()
 		end
 
 	end)
@@ -68,17 +74,20 @@ function Interface.Create(Config, Components, Debug)
 	pcall(function()
 
 		local playerGui =
-			Player:FindFirstChild("PlayerGui")
+			Player:FindFirstChild(
+				"PlayerGui"
+			)
 
 		if playerGui then
 
-			local oldGui =
-				playerGui:FindFirstChild("DealBlox")
+			local old =
+				playerGui:FindFirstChild(
+					"DealBlox"
+				)
 
-			if oldGui then
-				oldGui:Destroy()
+			if old then
+				old:Destroy()
 			end
-
 		end
 
 	end)
@@ -87,39 +96,59 @@ function Interface.Create(Config, Components, Debug)
 	-- SCREEN GUI
 	--==================================================
 
-	local Gui = Instance.new("ScreenGui")
+	local Gui =
+		Instance.new("ScreenGui")
 
-	Gui.Name = "DealBlox"
-	Gui.ResetOnSpawn = false
-	Gui.IgnoreGuiInset = true
+	Gui.Name =
+		"DealBlox"
+
+	Gui.ResetOnSpawn =
+		false
+
+	Gui.IgnoreGuiInset =
+		true
 
 	Gui.ZIndexBehavior =
 		Enum.ZIndexBehavior.Sibling
 
-	local parentSuccess = pcall(function()
-		Gui.Parent = CoreGui
-	end)
+	local parentSuccess =
+		pcall(function()
 
-	if not parentSuccess or not Gui.Parent then
+			Gui.Parent =
+				CoreGui
+
+		end)
+
+	if
+		not parentSuccess
+		or
+		not Gui.Parent
+	then
 
 		Gui.Parent =
-			Player:WaitForChild("PlayerGui")
-
+			Player:WaitForChild(
+				"PlayerGui"
+			)
 	end
 
 	--==================================================
-	-- BOTÃO FLUTUANTE DEAL BLOX
+	-- BOTÃO FLUTUANTE
 	--==================================================
 
 	local OpenButton =
 		Instance.new("ImageButton")
 
-	OpenButton.Name = "OpenButton"
+	OpenButton.Parent =
+		Gui
 
-	OpenButton.Parent = Gui
+	OpenButton.Name =
+		"OpenButton"
 
 	OpenButton.Size =
-		UDim2.fromOffset(64, 64)
+		UDim2.fromOffset(
+			64,
+			64
+		)
 
 	OpenButton.Position =
 		UDim2.new(
@@ -133,9 +162,10 @@ function Interface.Create(Config, Components, Debug)
 		Config.Colors.Panel
 
 	OpenButton.BackgroundTransparency =
-		0.12
+		0.10
 
-	OpenButton.BorderSizePixel = 0
+	OpenButton.BorderSizePixel =
+		0
 
 	OpenButton.Image =
 		Config.Logo
@@ -143,10 +173,8 @@ function Interface.Create(Config, Components, Debug)
 	OpenButton.ScaleType =
 		Enum.ScaleType.Fit
 
-	OpenButton.Active = true
-	OpenButton.AutoButtonColor = true
-
-	OpenButton.ZIndex = 1000
+	OpenButton.ZIndex =
+		1000
 
 	Components.Corner(
 		OpenButton,
@@ -161,61 +189,52 @@ function Interface.Create(Config, Components, Debug)
 			0
 		)
 
-	--==================================================
-	-- PULSO NEON DA BOLINHA
-	--==================================================
-
 	task.spawn(function()
 
 		while OpenButton.Parent do
 
 			TweenService:Create(
 				OpenStroke,
-				TweenInfo.new(
-					1.2,
-					Enum.EasingStyle.Sine,
-					Enum.EasingDirection.InOut
-				),
+				TweenInfo.new(1.3),
 				{
 					Color =
 						Config.Colors.RedNeon
 				}
 			):Play()
 
-			task.wait(1.2)
+			task.wait(1.3)
 
 			TweenService:Create(
 				OpenStroke,
-				TweenInfo.new(
-					1.2,
-					Enum.EasingStyle.Sine,
-					Enum.EasingDirection.InOut
-				),
+				TweenInfo.new(1.3),
 				{
 					Color =
 						Config.Colors.BlueNeon
 				}
 			):Play()
 
-			task.wait(1.2)
-
+			task.wait(1.3)
 		end
-
 	end)
 
 	--==================================================
-	-- PAINEL PRINCIPAL
+	-- MAIN
 	--==================================================
 
 	local Main =
 		Instance.new("Frame")
 
-	Main.Name = "Main"
+	Main.Parent =
+		Gui
 
-	Main.Parent = Gui
+	Main.Name =
+		"Main"
 
 	Main.AnchorPoint =
-		Vector2.new(0.5, 0.5)
+		Vector2.new(
+			0.5,
+			0.5
+		)
 
 	Main.Position =
 		UDim2.fromScale(
@@ -235,32 +254,19 @@ function Interface.Create(Config, Components, Debug)
 		Config.Colors.Background
 
 	Main.BackgroundTransparency =
-		0.14
+		0.12
 
-	Main.BorderSizePixel = 0
+	Main.BorderSizePixel =
+		0
 
-	Main.ClipsDescendants = true
+	Main.ClipsDescendants =
+		true
 
-	Main.Active = true
+	Main.Active =
+		true
 
-	Main.Visible = false
-
-	local MainConstraint =
-		Instance.new("UISizeConstraint")
-
-	MainConstraint.MinSize =
-		Vector2.new(
-			500,
-			320
-		)
-
-	MainConstraint.MaxSize =
-		Vector2.new(
-			920,
-			570
-		)
-
-	MainConstraint.Parent = Main
+	Main.Visible =
+		false
 
 	Components.Corner(
 		Main,
@@ -275,9 +281,25 @@ function Interface.Create(Config, Components, Debug)
 			0.05
 		)
 
-	--==================================================
-	-- EFEITO NEON DO PAINEL
-	--==================================================
+	local SizeConstraint =
+		Instance.new(
+			"UISizeConstraint"
+		)
+
+	SizeConstraint.Parent =
+		Main
+
+	SizeConstraint.MinSize =
+		Vector2.new(
+			500,
+			320
+		)
+
+	SizeConstraint.MaxSize =
+		Vector2.new(
+			920,
+			570
+		)
 
 	task.spawn(function()
 
@@ -285,11 +307,7 @@ function Interface.Create(Config, Components, Debug)
 
 			TweenService:Create(
 				MainStroke,
-				TweenInfo.new(
-					2,
-					Enum.EasingStyle.Sine,
-					Enum.EasingDirection.InOut
-				),
+				TweenInfo.new(2),
 				{
 					Color =
 						Config.Colors.RedNeon
@@ -300,11 +318,7 @@ function Interface.Create(Config, Components, Debug)
 
 			TweenService:Create(
 				MainStroke,
-				TweenInfo.new(
-					2,
-					Enum.EasingStyle.Sine,
-					Enum.EasingDirection.InOut
-				),
+				TweenInfo.new(2),
 				{
 					Color =
 						Config.Colors.BlueNeon
@@ -312,21 +326,21 @@ function Interface.Create(Config, Components, Debug)
 			):Play()
 
 			task.wait(2)
-
 		end
-
 	end)
 
 	--==================================================
-	-- TOP BAR
+	-- TOPBAR
 	--==================================================
 
 	local TopBar =
 		Instance.new("Frame")
 
-	TopBar.Name = "TopBar"
+	TopBar.Parent =
+		Main
 
-	TopBar.Parent = Main
+	TopBar.Name =
+		"TopBar"
 
 	TopBar.Size =
 		UDim2.new(
@@ -344,38 +358,39 @@ function Interface.Create(Config, Components, Debug)
 		)
 
 	TopBar.BackgroundTransparency =
-		0.08
+		0.05
 
-	TopBar.BorderSizePixel = 0
+	TopBar.BorderSizePixel =
+		0
 
-	TopBar.ZIndex = 20
+	TopBar.ZIndex =
+		20
 
 	Components.Corner(
 		TopBar,
 		15
 	)
 
-	-- corrige canto inferior da TopBar
-
 	local TopFix =
 		Instance.new("Frame")
 
-	TopFix.Parent = TopBar
-
-	TopFix.Size =
-		UDim2.new(
-			1,
-			0,
-			0,
-			16
-		)
+	TopFix.Parent =
+		TopBar
 
 	TopFix.Position =
 		UDim2.new(
 			0,
 			0,
 			1,
-			-16
+			-15
+		)
+
+	TopFix.Size =
+		UDim2.new(
+			1,
+			0,
+			0,
+			15
 		)
 
 	TopFix.BackgroundColor3 =
@@ -384,26 +399,17 @@ function Interface.Create(Config, Components, Debug)
 	TopFix.BackgroundTransparency =
 		TopBar.BackgroundTransparency
 
-	TopFix.BorderSizePixel = 0
+	TopFix.BorderSizePixel =
+		0
 
-	TopFix.ZIndex = 20
-
-	--==================================================
-	-- LINHAS NEON
-	--==================================================
+	TopFix.ZIndex =
+		20
 
 	local BlueLine =
 		Instance.new("Frame")
 
-	BlueLine.Parent = TopBar
-
-	BlueLine.Size =
-		UDim2.new(
-			0.5,
-			0,
-			0,
-			2
-		)
+	BlueLine.Parent =
+		TopBar
 
 	BlueLine.Position =
 		UDim2.new(
@@ -413,25 +419,28 @@ function Interface.Create(Config, Components, Debug)
 			-2
 		)
 
-	BlueLine.BackgroundColor3 =
-		Config.Colors.BlueNeon
-
-	BlueLine.BorderSizePixel = 0
-
-	BlueLine.ZIndex = 22
-
-	local RedLine =
-		Instance.new("Frame")
-
-	RedLine.Parent = TopBar
-
-	RedLine.Size =
+	BlueLine.Size =
 		UDim2.new(
 			0.5,
 			0,
 			0,
 			2
 		)
+
+	BlueLine.BackgroundColor3 =
+		Config.Colors.BlueNeon
+
+	BlueLine.BorderSizePixel =
+		0
+
+	BlueLine.ZIndex =
+		25
+
+	local RedLine =
+		Instance.new("Frame")
+
+	RedLine.Parent =
+		TopBar
 
 	RedLine.Position =
 		UDim2.new(
@@ -441,12 +450,22 @@ function Interface.Create(Config, Components, Debug)
 			-2
 		)
 
+	RedLine.Size =
+		UDim2.new(
+			0.5,
+			0,
+			0,
+			2
+		)
+
 	RedLine.BackgroundColor3 =
 		Config.Colors.RedNeon
 
-	RedLine.BorderSizePixel = 0
+	RedLine.BorderSizePixel =
+		0
 
-	RedLine.ZIndex = 22
+	RedLine.ZIndex =
+		25
 
 	--==================================================
 	-- LOGO
@@ -455,15 +474,8 @@ function Interface.Create(Config, Components, Debug)
 	local Logo =
 		Instance.new("ImageLabel")
 
-	Logo.Name = "Logo"
-
-	Logo.Parent = TopBar
-
-	Logo.Size =
-		UDim2.fromOffset(
-			40,
-			40
-		)
+	Logo.Parent =
+		TopBar
 
 	Logo.Position =
 		UDim2.fromOffset(
@@ -471,7 +483,14 @@ function Interface.Create(Config, Components, Debug)
 			8
 		)
 
-	Logo.BackgroundTransparency = 1
+	Logo.Size =
+		UDim2.fromOffset(
+			40,
+			40
+		)
+
+	Logo.BackgroundTransparency =
+		1
 
 	Logo.Image =
 		Config.Logo
@@ -479,22 +498,18 @@ function Interface.Create(Config, Components, Debug)
 	Logo.ScaleType =
 		Enum.ScaleType.Fit
 
-	Logo.ZIndex = 25
+	Logo.ZIndex =
+		30
 
 	--==================================================
-	-- NOME DEAL BLOX
+	-- TÍTULO
 	--==================================================
 
 	local Title =
 		Instance.new("TextLabel")
 
-	Title.Parent = TopBar
-
-	Title.Size =
-		UDim2.fromOffset(
-			125,
-			56
-		)
+	Title.Parent =
+		TopBar
 
 	Title.Position =
 		UDim2.fromOffset(
@@ -502,7 +517,14 @@ function Interface.Create(Config, Components, Debug)
 			0
 		)
 
-	Title.BackgroundTransparency = 1
+	Title.Size =
+		UDim2.fromOffset(
+			120,
+			56
+		)
+
+	Title.BackgroundTransparency =
+		1
 
 	Title.Text =
 		"DEAL BLOX"
@@ -510,7 +532,8 @@ function Interface.Create(Config, Components, Debug)
 	Title.TextColor3 =
 		Config.Colors.Text
 
-	Title.TextSize = 18
+	Title.TextSize =
+		18
 
 	Title.Font =
 		Enum.Font.GothamBold
@@ -518,7 +541,8 @@ function Interface.Create(Config, Components, Debug)
 	Title.TextXAlignment =
 		Enum.TextXAlignment.Left
 
-	Title.ZIndex = 25
+	Title.ZIndex =
+		30
 
 	--==================================================
 	-- SITE
@@ -527,13 +551,11 @@ function Interface.Create(Config, Components, Debug)
 	local Site =
 		Instance.new("TextLabel")
 
-	Site.Parent = TopBar
+	Site.Parent =
+		TopBar
 
-	Site.Size =
-		UDim2.fromOffset(
-			160,
-			56
-		)
+	Site.Name =
+		"Site"
 
 	Site.Position =
 		UDim2.fromOffset(
@@ -541,7 +563,14 @@ function Interface.Create(Config, Components, Debug)
 			0
 		)
 
-	Site.BackgroundTransparency = 1
+	Site.Size =
+		UDim2.fromOffset(
+			112,
+			56
+		)
+
+	Site.BackgroundTransparency =
+		1
 
 	Site.Text =
 		"dealblox.com.br"
@@ -549,7 +578,8 @@ function Interface.Create(Config, Components, Debug)
 	Site.TextColor3 =
 		Config.Colors.BlueNeon
 
-	Site.TextSize = 11
+	Site.TextSize =
+		11
 
 	Site.Font =
 		Enum.Font.Gotham
@@ -557,24 +587,92 @@ function Interface.Create(Config, Components, Debug)
 	Site.TextXAlignment =
 		Enum.TextXAlignment.Left
 
-	Site.ZIndex = 25
+	Site.ZIndex =
+		30
 
 	--==================================================
-	-- BOTÃO MINIMIZAR
+	-- SEA
+	--==================================================
+
+	local SeaMap = {
+		[2753915549] = 1,
+		[4442272183] = 2,
+		[7449423635] = 3
+	}
+
+	local CurrentSea =
+		SeaMap[game.PlaceId]
+
+	local SeaBadge =
+		Instance.new("TextLabel")
+
+	SeaBadge.Parent =
+		TopBar
+
+	SeaBadge.Name =
+		"SeaBadge"
+
+	SeaBadge.Position =
+		UDim2.fromOffset(
+			294,
+			14
+		)
+
+	SeaBadge.Size =
+		UDim2.fromOffset(
+			64,
+			28
+		)
+
+	SeaBadge.BackgroundColor3 =
+		Config.Colors.Panel2
+
+	SeaBadge.BackgroundTransparency =
+		0.02
+
+	SeaBadge.BorderSizePixel =
+		0
+
+	SeaBadge.Text =
+		CurrentSea
+			and
+			("SEA " .. CurrentSea)
+			or
+			"SEA ?"
+
+	SeaBadge.TextColor3 =
+		Config.Colors.Text
+
+	SeaBadge.TextSize =
+		11
+
+	SeaBadge.Font =
+		Enum.Font.GothamBold
+
+	SeaBadge.ZIndex =
+		31
+
+	Components.Corner(
+		SeaBadge,
+		7
+	)
+
+	Components.Stroke(
+		SeaBadge,
+		Config.Colors.BlueNeon,
+		1.5,
+		0.05
+	)
+
+	--==================================================
+	-- MINIMIZAR
 	--==================================================
 
 	local Minimize =
 		Instance.new("TextButton")
 
-	Minimize.Name = "Minimize"
-
-	Minimize.Parent = TopBar
-
-	Minimize.Size =
-		UDim2.fromOffset(
-			35,
-			35
-		)
+	Minimize.Parent =
+		TopBar
 
 	Minimize.Position =
 		UDim2.new(
@@ -584,58 +682,47 @@ function Interface.Create(Config, Components, Debug)
 			-17
 		)
 
-	Minimize.BackgroundColor3 =
-		Color3.fromRGB(
-			10,
-			90,
-			180
+	Minimize.Size =
+		UDim2.fromOffset(
+			35,
+			35
 		)
 
-	Minimize.BackgroundTransparency =
-		0.05
+	Minimize.BackgroundColor3 =
+		Config.Colors.Blue
 
-	Minimize.BorderSizePixel = 0
+	Minimize.BorderSizePixel =
+		0
 
-	Minimize.Text = "—"
+	Minimize.Text =
+		"—"
 
 	Minimize.TextColor3 =
 		Config.Colors.Text
 
-	Minimize.TextSize = 20
+	Minimize.TextSize =
+		20
 
 	Minimize.Font =
 		Enum.Font.GothamBold
 
-	Minimize.ZIndex = 30
+	Minimize.ZIndex =
+		35
 
 	Components.Corner(
 		Minimize,
 		8
 	)
 
-	Components.Stroke(
-		Minimize,
-		Config.Colors.BlueNeon,
-		1,
-		0.2
-	)
-
 	--==================================================
-	-- BOTÃO FECHAR
+	-- X
 	--==================================================
 
 	local Close =
 		Instance.new("TextButton")
 
-	Close.Name = "Close"
-
-	Close.Parent = TopBar
-
-	Close.Size =
-		UDim2.fromOffset(
-			35,
-			35
-		)
+	Close.Parent =
+		TopBar
 
 	Close.Position =
 		UDim2.new(
@@ -645,36 +732,36 @@ function Interface.Create(Config, Components, Debug)
 			-17
 		)
 
+	Close.Size =
+		UDim2.fromOffset(
+			35,
+			35
+		)
+
 	Close.BackgroundColor3 =
 		Config.Colors.Red
 
-	Close.BackgroundTransparency =
-		0.04
+	Close.BorderSizePixel =
+		0
 
-	Close.BorderSizePixel = 0
-
-	Close.Text = "X"
+	Close.Text =
+		"X"
 
 	Close.TextColor3 =
 		Config.Colors.Text
 
-	Close.TextSize = 14
+	Close.TextSize =
+		14
 
 	Close.Font =
 		Enum.Font.GothamBold
 
-	Close.ZIndex = 30
+	Close.ZIndex =
+		35
 
 	Components.Corner(
 		Close,
 		8
-	)
-
-	Components.Stroke(
-		Close,
-		Config.Colors.RedNeon,
-		1,
-		0.1
 	)
 
 	--==================================================
@@ -684,9 +771,8 @@ function Interface.Create(Config, Components, Debug)
 	local Body =
 		Instance.new("Frame")
 
-	Body.Name = "Body"
-
-	Body.Parent = Main
+	Body.Parent =
+		Main
 
 	Body.Position =
 		UDim2.fromOffset(
@@ -702,7 +788,8 @@ function Interface.Create(Config, Components, Debug)
 			-56
 		)
 
-	Body.BackgroundTransparency = 1
+	Body.BackgroundTransparency =
+		1
 
 	--==================================================
 	-- SIDEBAR
@@ -711,9 +798,11 @@ function Interface.Create(Config, Components, Debug)
 	local Sidebar =
 		Instance.new("ScrollingFrame")
 
-	Sidebar.Name = "Sidebar"
+	Sidebar.Parent =
+		Body
 
-	Sidebar.Parent = Body
+	Sidebar.Name =
+		"Sidebar"
 
 	Sidebar.Size =
 		UDim2.new(
@@ -731,77 +820,65 @@ function Interface.Create(Config, Components, Debug)
 		)
 
 	Sidebar.BackgroundTransparency =
-		0.16
+		0.13
 
-	Sidebar.BorderSizePixel = 0
+	Sidebar.BorderSizePixel =
+		0
 
-	Sidebar.ScrollBarThickness = 3
+	Sidebar.ScrollBarThickness =
+		3
 
 	Sidebar.ScrollBarImageColor3 =
 		Config.Colors.BlueNeon
 
-	Sidebar.CanvasSize =
-		UDim2.new()
-
 	Sidebar.AutomaticCanvasSize =
 		Enum.AutomaticSize.Y
 
-	local SidebarLayout =
-		Instance.new("UIListLayout")
-
-	SidebarLayout.Parent = Sidebar
-
-	SidebarLayout.Padding =
-		UDim.new(
-			0,
-			6
-		)
-
-	SidebarLayout.SortOrder =
-		Enum.SortOrder.LayoutOrder
-
-	SidebarLayout.HorizontalAlignment =
-		Enum.HorizontalAlignment.Center
+	Sidebar.CanvasSize =
+		UDim2.new()
 
 	local SidebarPadding =
 		Instance.new("UIPadding")
 
-	SidebarPadding.Parent = Sidebar
+	SidebarPadding.Parent =
+		Sidebar
 
 	SidebarPadding.PaddingTop =
-		UDim.new(
-			0,
-			10
-		)
+		UDim.new(0, 10)
 
 	SidebarPadding.PaddingBottom =
-		UDim.new(
-			0,
-			10
-		)
+		UDim.new(0, 10)
 
 	SidebarPadding.PaddingLeft =
-		UDim.new(
-			0,
-			7
-		)
+		UDim.new(0, 7)
 
 	SidebarPadding.PaddingRight =
-		UDim.new(
-			0,
-			7
-		)
+		UDim.new(0, 7)
+
+	local SidebarLayout =
+		Instance.new("UIListLayout")
+
+	SidebarLayout.Parent =
+		Sidebar
+
+	SidebarLayout.Padding =
+		UDim.new(0, 6)
+
+	SidebarLayout.SortOrder =
+		Enum.SortOrder.LayoutOrder
 
 	--==================================================
-	-- CONTEÚDO DAS ABAS
+	-- CONTENT
 	--==================================================
 
 	local Content =
 		Instance.new("Frame")
 
-	Content.Name = "Content"
+	Content.Parent =
+		Body
 
-	Content.Parent = Body
+	Content.Name =
+		"Content"
 
 	Content.Position =
 		UDim2.new(
@@ -823,60 +900,68 @@ function Interface.Create(Config, Components, Debug)
 		Config.Colors.Panel
 
 	Content.BackgroundTransparency =
-		0.18
+		0.16
 
-	Content.BorderSizePixel = 0
+	Content.BorderSizePixel =
+		0
 
 	--==================================================
-	-- TABELA DAS ABAS
+	-- ABAS
 	--==================================================
 
 	local Tabs = {}
 
-	local CurrentTab = nil
-
-	--==================================================
-	-- PÁGINA EM OBRA
-	--==================================================
-
-	local function CreateConstructionPage(
+	local function ConstructionPage(
 		Page,
 		Name
 	)
 
-		local Icon =
+		local icon =
 			Instance.new("TextLabel")
 
-		Icon.Parent = Page
+		icon.Parent =
+			Page
 
-		Icon.Size =
-			UDim2.new(
-				1,
-				0,
-				0,
-				70
-			)
-
-		Icon.Position =
+		icon.Position =
 			UDim2.new(
 				0,
 				0,
 				0.5,
-				-85
+				-90
 			)
 
-		Icon.BackgroundTransparency = 1
+		icon.Size =
+			UDim2.new(
+				1,
+				0,
+				0,
+				60
+			)
 
-		Icon.Text = "🚧"
+		icon.BackgroundTransparency =
+			1
 
-		Icon.TextSize = 48
+		icon.Text =
+			"🚧"
 
-		local ConstructionTitle =
+		icon.TextSize =
+			46
+
+		local title =
 			Instance.new("TextLabel")
 
-		ConstructionTitle.Parent = Page
+		title.Parent =
+			Page
 
-		ConstructionTitle.Size =
+		title.Position =
+			UDim2.new(
+				0,
+				20,
+				0.5,
+				-20
+			)
+
+		title.Size =
 			UDim2.new(
 				1,
 				-40,
@@ -884,98 +969,88 @@ function Interface.Create(Config, Components, Debug)
 				35
 			)
 
-		ConstructionTitle.Position =
+		title.BackgroundTransparency =
+			1
+
+		title.Text =
+			Name
+
+		title.TextColor3 =
+			Config.Colors.Text
+
+		title.TextSize =
+			20
+
+		title.Font =
+			Enum.Font.GothamBold
+
+		local text =
+			Instance.new("TextLabel")
+
+		text.Parent =
+			Page
+
+		text.Position =
 			UDim2.new(
 				0,
 				20,
 				0.5,
-				-10
+				20
 			)
 
-		ConstructionTitle.BackgroundTransparency = 1
-
-		ConstructionTitle.Text =
-			Name
-
-		ConstructionTitle.TextColor3 =
-			Config.Colors.Text
-
-		ConstructionTitle.TextSize = 21
-
-		ConstructionTitle.Font =
-			Enum.Font.GothamBold
-
-		local ConstructionText =
-			Instance.new("TextLabel")
-
-		ConstructionText.Parent = Page
-
-		ConstructionText.Size =
+		text.Size =
 			UDim2.new(
 				1,
-				-50,
+				-40,
 				0,
-				60
+				50
 			)
 
-		ConstructionText.Position =
-			UDim2.new(
-				0,
-				25,
-				0.5,
-				30
-			)
+		text.BackgroundTransparency =
+			1
 
-		ConstructionText.BackgroundTransparency = 1
+		text.Text =
+			"Esta aba ainda está em obra."
 
-		ConstructionText.Text =
-			"Esta aba ainda está em obra.\n" ..
-			"Estamos desenvolvendo esta funcionalidade."
-
-		ConstructionText.TextColor3 =
+		text.TextColor3 =
 			Config.Colors.SubText
 
-		ConstructionText.TextSize = 13
+		text.TextSize =
+			13
 
-		ConstructionText.Font =
+		text.Font =
 			Enum.Font.Gotham
-
-		ConstructionText.TextWrapped = true
-
 	end
 
-	--==================================================
-	-- SELECIONAR ABA
-	--==================================================
+	local function SelectTab(
+		Name
+	)
 
-	local function SelectTab(Name)
-
-		local Selected =
-			Tabs[Name]
-
-		if not Selected then
+		if not Tabs[Name] then
 			return
 		end
 
-		for tabName, Tab in pairs(Tabs) do
+		for _, tab in pairs(Tabs) do
 
-			Tab.Page.Visible = false
+			tab.Page.Visible =
+				false
 
-			Tab.Button.BackgroundColor3 =
+			tab.Button.BackgroundColor3 =
 				Color3.fromRGB(
 					17,
 					23,
 					35
 				)
 
-			Tab.Button.BackgroundTransparency =
-				0.10
-
-			Tab.Stroke.Thickness = 0
-
+			tab.Stroke.Thickness =
+				0
 		end
 
-		Selected.Page.Visible = true
+		local Selected =
+			Tabs[Name]
+
+		Selected.Page.Visible =
+			true
 
 		Selected.Button.BackgroundColor3 =
 			Color3.fromRGB(
@@ -984,42 +1059,24 @@ function Interface.Create(Config, Components, Debug)
 				105
 			)
 
-		Selected.Button.BackgroundTransparency =
-			0
-
 		Selected.Stroke.Thickness =
 			1.5
-
-		CurrentTab = Name
-
-		Debug.Log(
-			"Aba selecionada: " ..
-			Name
-		)
-
 	end
 
-	--==================================================
-	-- CRIAR ABA
-	--==================================================
-
-	local function CreateTab(
-		Name,
-		Order
-	)
+	for Order, Name in ipairs(
+		TAB_NAMES
+	) do
 
 		local Button =
 			Instance.new("TextButton")
 
-		Button.Name =
-			Name .. "Button"
-
-		Button.Parent = Sidebar
+		Button.Parent =
+			Sidebar
 
 		Button.Size =
 			UDim2.new(
 				1,
-				-4,
+				0,
 				0,
 				37
 			)
@@ -1031,26 +1088,23 @@ function Interface.Create(Config, Components, Debug)
 				35
 			)
 
-		Button.BackgroundTransparency =
-			0.10
+		Button.BorderSizePixel =
+			0
 
-		Button.BorderSizePixel = 0
-
-		Button.Text = Name
+		Button.Text =
+			Name
 
 		Button.TextColor3 =
 			Config.Colors.Text
 
-		Button.TextSize = 11
+		Button.TextSize =
+			11
 
 		Button.Font =
 			Enum.Font.Gotham
 
 		Button.LayoutOrder =
 			Order
-
-		Button.Active = true
-		Button.AutoButtonColor = true
 
 		Components.Corner(
 			Button,
@@ -1060,31 +1114,23 @@ function Interface.Create(Config, Components, Debug)
 		local Stroke =
 			Components.Stroke(
 				Button,
-				Config.Colors.BlueNeon,
+				Order % 2 == 0
+					and
+					Config.Colors.RedNeon
+					or
+					Config.Colors.BlueNeon,
 				0,
 				0.1
 			)
 
-		-- alterna azul/vermelho
-
-		if Order % 2 == 0 then
-
-			Stroke.Color =
-				Config.Colors.RedNeon
-
-		else
-
-			Stroke.Color =
-				Config.Colors.BlueNeon
-
-		end
-
 		local Page =
 			Instance.new("Frame")
 
-		Page.Name = Name
+		Page.Parent =
+			Content
 
-		Page.Parent = Content
+		Page.Name =
+			Name
 
 		Page.Size =
 			UDim2.fromScale(
@@ -1092,82 +1138,56 @@ function Interface.Create(Config, Components, Debug)
 				1
 			)
 
-		Page.BackgroundTransparency = 1
+		Page.BackgroundTransparency =
+			1
 
-		Page.Visible = false
+		Page.Visible =
+			false
 
 		Tabs[Name] = {
-
-			Name = Name,
-
 			Button = Button,
-
 			Stroke = Stroke,
-
 			Page = Page
-
 		}
 
-		-- Principal será criada pelo
-		-- ui/principal.lua
+		if
+			Name ~= "Principal"
+			and
+			Name ~= "Farm"
+			and
+			Name ~= "Configurações de Farm"
+		then
 
-		if Name ~= "Principal" then
-
-			CreateConstructionPage(
+			ConstructionPage(
 				Page,
 				Name
 			)
-
 		end
 
-		Button.Activated:Connect(function()
+		Button.Activated:Connect(
+			function()
 
-			Debug.SafeCall(
-				"Abrir aba " .. Name,
+				SelectTab(
+					Name
+				)
 
-				function()
-
-					SelectTab(
-						Name
-					)
-
-				end
-			)
-
-		end)
-
-	end
-
-	--==================================================
-	-- GERAR ABAS
-	--==================================================
-
-	for Order, Name in ipairs(TAB_NAMES) do
-
-		CreateTab(
-			Name,
-			Order
+			end
 		)
-
 	end
-
-	--==================================================
-	-- PRINCIPAL PADRÃO
-	--==================================================
 
 	SelectTab(
 		"Principal"
 	)
 
 	--==================================================
-	-- ESTADOS DA JANELA
+	-- ABRIR
 	--==================================================
 
-	local Opened = false
+	local Opened =
+		false
 
-	local Minimized = false
-
-	local AnimationLock = false
+	local Minimized =
+		false
 
 	local NormalSize =
 		UDim2.new(
@@ -1177,89 +1197,36 @@ function Interface.Create(Config, Components, Debug)
 			0
 		)
 
-	--==================================================
-	-- ABRIR / FECHAR
-	--==================================================
+	local function SetOpen(
+		State
+	)
 
-	local function SetOpen(State)
+		Opened =
+			State
 
-		if AnimationLock then
-			return
-		end
-
-		AnimationLock = true
-
-		Opened = State
-
-		if State then
-
-			Main.Visible = true
-
-			Main.BackgroundTransparency =
-				0.45
-
-			TweenService:Create(
-				Main,
-				TweenInfo.new(
-					0.22,
-					Enum.EasingStyle.Quad,
-					Enum.EasingDirection.Out
-				),
-				{
-					BackgroundTransparency =
-						0.14
-				}
-			):Play()
-
-			task.wait(0.22)
-
-		else
-
-			local Tween =
-				TweenService:Create(
-					Main,
-					TweenInfo.new(
-						0.18,
-						Enum.EasingStyle.Quad,
-						Enum.EasingDirection.In
-					),
-					{
-						BackgroundTransparency =
-							1
-					}
-				)
-
-			Tween:Play()
-
-			Tween.Completed:Wait()
-
-			Main.Visible = false
-
-		end
-
-		AnimationLock = false
-
+		Main.Visible =
+			State
 	end
 
-	--==================================================
-	-- MINIMIZAR
-	--==================================================
+	local function SetMinimized(
+		State
+	)
 
-	local function SetMinimized(State)
-
-		Minimized = State
+		Minimized =
+			State
 
 		if State then
 
-			Body.Visible = false
+			Body.Visible =
+				false
 
-			MainConstraint.MinSize =
+			SizeConstraint.MinSize =
 				Vector2.new(
 					400,
 					56
 				)
 
-			MainConstraint.MaxSize =
+			SizeConstraint.MaxSize =
 				Vector2.new(
 					920,
 					56
@@ -1273,17 +1240,18 @@ function Interface.Create(Config, Components, Debug)
 					56
 				)
 
-			Minimize.Text = "+"
+			Minimize.Text =
+				"+"
 
 		else
 
-			MainConstraint.MinSize =
+			SizeConstraint.MinSize =
 				Vector2.new(
 					500,
 					320
 				)
 
-			MainConstraint.MaxSize =
+			SizeConstraint.MaxSize =
 				Vector2.new(
 					920,
 					570
@@ -1292,101 +1260,82 @@ function Interface.Create(Config, Components, Debug)
 			Main.Size =
 				NormalSize
 
-			Body.Visible = true
+			Body.Visible =
+				true
 
-			Minimize.Text = "—"
-
+			Minimize.Text =
+				"—"
 		end
-
 	end
 
-	--==================================================
-	-- EVENTOS
-	--==================================================
+	OpenButton.Activated:Connect(
+		function()
 
-	OpenButton.Activated:Connect(function()
-
-		Debug.SafeCall(
-			"Botão Deal Blox",
-
-			function()
-
-				if Minimized then
-					SetMinimized(false)
-				end
-
-				SetOpen(
-					not Opened
-				)
-
+			if Minimized then
+				SetMinimized(false)
 			end
-		)
 
-	end)
+			SetOpen(
+				not Opened
+			)
+		end
+	)
 
-	Close.Activated:Connect(function()
+	Close.Activated:Connect(
+		function()
 
-		Debug.SafeCall(
-			"Fechar interface",
-
-			function()
-
-				SetOpen(false)
-
-			end
-		)
-
-	end)
-
-	Minimize.Activated:Connect(function()
-
-		Debug.SafeCall(
-			"Minimizar interface",
-
-			function()
-
-				SetMinimized(
-					not Minimized
-				)
-
-			end
-		)
-
-	end)
-
-	--==================================================
-	-- ARRASTAR JANELA
-	--==================================================
-
-	local Dragging = false
-
-	local DragStart = nil
-
-	local StartPosition = nil
-
-	TopBar.InputBegan:Connect(function(Input)
-
-		if
-			Input.UserInputType ==
-				Enum.UserInputType.MouseButton1
-
-			or
-
-			Input.UserInputType ==
-				Enum.UserInputType.Touch
-		then
-
-			Dragging = true
-
-			DragStart =
-				Input.Position
-
-			StartPosition =
-				Main.Position
+			SetOpen(false)
 
 		end
+	)
 
-	end)
+	Minimize.Activated:Connect(
+		function()
+
+			SetMinimized(
+				not Minimized
+			)
+
+		end
+	)
+
+	--==================================================
+	-- DRAG
+	--==================================================
+
+	local Dragging =
+		false
+
+	local DragStart =
+		nil
+
+	local StartPosition =
+		nil
+
+	TopBar.InputBegan:Connect(
+		function(Input)
+
+			if
+				Input.UserInputType
+					==
+				Enum.UserInputType.MouseButton1
+				or
+				Input.UserInputType
+					==
+				Enum.UserInputType.Touch
+			then
+
+				Dragging =
+					true
+
+				DragStart =
+					Input.Position
+
+				StartPosition =
+					Main.Position
+			end
+		end
+	)
 
 	UserInputService.InputChanged:Connect(
 		function(Input)
@@ -1396,35 +1345,32 @@ function Interface.Create(Config, Components, Debug)
 			end
 
 			if
-				Input.UserInputType ==
-					Enum.UserInputType.MouseMovement
-
+				Input.UserInputType
+					==
+				Enum.UserInputType.MouseMovement
 				or
-
-				Input.UserInputType ==
-					Enum.UserInputType.Touch
+				Input.UserInputType
+					==
+				Enum.UserInputType.Touch
 			then
 
 				local Delta =
-					Input.Position -
+					Input.Position
+					-
 					DragStart
 
 				Main.Position =
 					UDim2.new(
-
 						StartPosition.X.Scale,
-
-						StartPosition.X.Offset +
+						StartPosition.X.Offset
+							+
 							Delta.X,
-
 						StartPosition.Y.Scale,
-
-						StartPosition.Y.Offset +
+						StartPosition.Y.Offset
+							+
 							Delta.Y
 					)
-
 			end
-
 		end
 	)
 
@@ -1432,69 +1378,79 @@ function Interface.Create(Config, Components, Debug)
 		function(Input)
 
 			if
-				Input.UserInputType ==
-					Enum.UserInputType.MouseButton1
-
+				Input.UserInputType
+					==
+				Enum.UserInputType.MouseButton1
 				or
-
-				Input.UserInputType ==
-					Enum.UserInputType.Touch
+				Input.UserInputType
+					==
+				Enum.UserInputType.Touch
 			then
 
-				Dragging = false
-
+				Dragging =
+					false
 			end
-
 		end
 	)
 
 	--==================================================
-	-- RETORNO DA INTERFACE
+	-- APP
 	--==================================================
 
 	local App = {}
 
-	App.Gui = Gui
+	App.Gui =
+		Gui
 
-	App.Main = Main
-	App.TopBar = TopBar
-	App.Body = Body
+	App.Main =
+		Main
 
-	App.Sidebar = Sidebar
-	App.Content = Content
+	App.TopBar =
+		TopBar
 
-	App.OpenButton = OpenButton
+	App.Body =
+		Body
 
-	App.Tabs = Tabs
+	App.Sidebar =
+		Sidebar
 
-	App.SelectTab = SelectTab
-	App.SetOpen = SetOpen
-	App.SetMinimized = SetMinimized
+	App.Content =
+		Content
 
-	function App:GetPage(Name)
+	App.Tabs =
+		Tabs
 
-		if self.Tabs[Name] then
+	App.SeaBadge =
+		SeaBadge
 
-			return self.Tabs[Name].Page
+	App.Site =
+		Site
 
+	App.OpenButton =
+		OpenButton
+
+	App.SelectTab =
+		SelectTab
+
+	App.SetOpen =
+		SetOpen
+
+	function App:GetPage(
+		Name
+	)
+
+		local Tab =
+			self.Tabs[Name]
+
+		if Tab then
+			return Tab.Page
 		end
 
 		return nil
-
-	end
-
-	function App:IsOpen()
-		return Opened
-	end
-
-	function App:IsMinimized()
-		return Minimized
 	end
 
 	Debug.Log(
-		"Interface criada com " ..
-		#TAB_NAMES ..
-		" abas."
+		"Interface criada."
 	)
 
 	return App
