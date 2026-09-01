@@ -14,6 +14,7 @@ local Player =
 	Players.LocalPlayer
 
 while not Player do
+
 	task.wait()
 
 	Player =
@@ -30,10 +31,12 @@ Environment.DealBloxLoading =
 	true
 
 --==================================================
--- BOOT LOG
+-- LOG
 --==================================================
 
-local function Log(text)
+local function Log(
+	text
+)
 
 	print(
 		"[DEAL BLOX / MAIN] "
@@ -42,7 +45,9 @@ local function Log(text)
 	)
 end
 
-local function Warn(text)
+local function Warn(
+	text
+)
 
 	warn(
 		"[DEAL BLOX / MAIN] "
@@ -52,14 +57,13 @@ local function Warn(text)
 end
 
 --==================================================
--- LOAD MODULE
+-- LOAD
 --==================================================
 
 local LoadedModules = {}
 
 local function LoadModule(
-	path,
-	required
+	path
 )
 
 	Log(
@@ -67,8 +71,6 @@ local function LoadModule(
 		..
 		path
 	)
-
-	-- DOWNLOAD
 
 	local downloadSuccess, source =
 		pcall(function()
@@ -83,52 +85,49 @@ local function LoadModule(
 
 	if not downloadSuccess then
 
-		Warn(
-			"Falha download: "
+		error(
+			"Falha ao baixar "
+			..
+			path
+			..
+			"\n"
+			..
+			tostring(source)
+		)
+	end
+
+	if
+		not source
+		or
+		source == ""
+	then
+
+		error(
+			"Arquivo vazio: "
 			..
 			path
 		)
-
-		Warn(source)
-
-		if required then
-			error(
-				"Falha obrigatória: "
-				..
-				path
-			)
-		end
-
-		return nil
 	end
 
-	-- COMPILAR
-
 	local compiled, compileError =
-		loadstring(source)
+		loadstring(
+			source
+		)
 
 	if not compiled then
 
-		Warn(
-			"Erro compilação: "
+		error(
+			"Erro de compilação em "
 			..
 			path
-		)
-
-		Warn(
-			compileError
-		)
-
-		if required then
-			error(
+			..
+			"\n"
+			..
+			tostring(
 				compileError
 			)
-		end
-
-		return nil
+		)
 	end
-
-	-- EXECUTAR
 
 	local success, result =
 		xpcall(
@@ -138,19 +137,17 @@ local function LoadModule(
 
 	if not success then
 
-		Warn(
-			"Erro módulo: "
+		error(
+			"Erro executando "
 			..
 			path
+			..
+			"\n"
+			..
+			tostring(
+				result
+			)
 		)
-
-		Warn(result)
-
-		if required then
-			error(result)
-		end
-
-		return nil
 	end
 
 	LoadedModules[path] =
@@ -169,69 +166,55 @@ end
 -- START
 --==================================================
 
-local success, startupError =
+local success, errorMessage =
 	xpcall(
 
 		function()
 
 			Log(
-				"=========================="
+				"============================="
 			)
 
 			Log(
 				"Iniciando DEAL BLOX"
 			)
 
-			--==========================================
 			-- CORE
-			--==========================================
 
 			local Config =
 				LoadModule(
-					"core/config.lua",
-					true
+					"core/config.lua"
 				)
 
 			local Debug =
 				LoadModule(
-					"core/debug.lua",
-					true
+					"core/debug.lua"
 				)
 
 			local State =
 				LoadModule(
-					"core/state.lua",
-					true
+					"core/state.lua"
 				)
 
-			--==========================================
 			-- DATA
-			--==========================================
 
 			local Quests =
 				LoadModule(
-					"data/quests.lua",
-					true
+					"data/quests.lua"
 				)
 
-			--==========================================
-			-- COMPONENTS
-			--==========================================
+			-- UI COMPONENTS
 
 			local Components =
 				LoadModule(
-					"ui/components.lua",
-					true
+					"ui/components.lua"
 				)
 
-			--==========================================
 			-- INTERFACE
-			--==========================================
 
 			local Interface =
 				LoadModule(
-					"ui/interface.lua",
-					true
+					"ui/interface.lua"
 				)
 
 			local App =
@@ -241,14 +224,18 @@ local success, startupError =
 					Debug
 				)
 
-			--==========================================
+			if not App then
+
+				error(
+					"Interface.Create não retornou App."
+				)
+			end
+
 			-- PRINCIPAL
-			--==========================================
 
 			local Principal =
 				LoadModule(
-					"ui/principal.lua",
-					true
+					"ui/principal.lua"
 				)
 
 			Principal.Create(
@@ -258,14 +245,11 @@ local success, startupError =
 				Debug
 			)
 
-			--==========================================
-			-- MOTOR FARM
-			--==========================================
+			-- FARM ENGINE
 
 			local FarmModule =
 				LoadModule(
-					"modules/farm.lua",
-					true
+					"modules/farm.lua"
 				)
 
 			local FarmEngine =
@@ -275,14 +259,18 @@ local success, startupError =
 					Debug
 				)
 
-			--==========================================
-			-- FARM CONFIG UI
-			--==========================================
+			if not FarmEngine then
+
+				error(
+					"FarmModule.Create não retornou FarmEngine."
+				)
+			end
+
+			-- CONFIG FARM
 
 			local FarmConfig =
 				LoadModule(
-					"ui/farmconfig.lua",
-					true
+					"ui/farmconfig.lua"
 				)
 
 			FarmConfig.Create(
@@ -293,14 +281,11 @@ local success, startupError =
 				State
 			)
 
-			--==========================================
 			-- FARM UI
-			--==========================================
 
 			local FarmUI =
 				LoadModule(
-					"ui/farm.lua",
-					true
+					"ui/farm.lua"
 				)
 
 			FarmUI.Create(
@@ -312,9 +297,7 @@ local success, startupError =
 				FarmEngine
 			)
 
-			--==========================================
-			-- EXPOR DEAL BLOX
-			--==========================================
+			-- GLOBAL
 
 			Environment.DealBlox = {
 
@@ -329,9 +312,6 @@ local success, startupError =
 
 				Quests =
 					Quests,
-
-				Components =
-					Components,
 
 				App =
 					App,
@@ -350,7 +330,7 @@ local success, startupError =
 				true
 
 			Debug.Log(
-				"=========================="
+				"============================="
 			)
 
 			Debug.Log(
@@ -358,20 +338,19 @@ local success, startupError =
 			)
 
 			Debug.Log(
-				"Auto Farm disponível."
+				"Farm e Configurações disponíveis."
 			)
 
 			Debug.Log(
-				"=========================="
+				"============================="
 			)
-
 		end,
 
 		debug.traceback
 	)
 
 --==================================================
--- ERROR
+-- ERRO
 --==================================================
 
 if not success then
@@ -383,18 +362,18 @@ if not success then
 		false
 
 	Warn(
-		"━━━━━━━━━━━━━━━━━━━━━━━━"
+		"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	)
 
 	Warn(
-		"❌ DEAL BLOX NÃO INICIOU"
+		"❌ ERRO AO INICIAR DEAL BLOX"
 	)
 
 	Warn(
-		startupError
+		errorMessage
 	)
 
 	Warn(
-		"━━━━━━━━━━━━━━━━━━━━━━━━"
+		"━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	)
 end
