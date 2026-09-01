@@ -1,32 +1,43 @@
 --==================================================
 -- DEAL BLOX
--- UI / FARM CONFIG
+-- UI / FARM
 --==================================================
 
-local FarmConfig = {}
+local FarmUI = {}
 
-function FarmConfig.Create(
+function FarmUI.Create(
 	App,
 	Config,
 	Components,
 	Debug,
-	State
+	State,
+	FarmEngine
 )
 
 	local Page =
 		App:GetPage(
-			"Configurações de Farm"
+			"Farm"
 		)
 
 	if not Page then
+
+		Debug.Warn(
+			"Aba Farm não encontrada."
+		)
+
 		return
 	end
 
-	for _, child in ipairs(
+	for _, object in ipairs(
 		Page:GetChildren()
 	) do
-		child:Destroy()
+
+		object:Destroy()
 	end
+
+	Debug.Log(
+		"Criando aba Farm..."
+	)
 
 	local Scroll =
 		Components.Scroll(
@@ -39,7 +50,7 @@ function FarmConfig.Create(
 		14,
 		14,
 		14,
-		18
+		20
 	)
 
 	Components.List(
@@ -47,19 +58,15 @@ function FarmConfig.Create(
 		12
 	)
 
-	--==================================================
-	-- TÍTULO
-	--==================================================
-
 	Components.Title(
 		Scroll,
-		"Configurações de Farm",
+		"Auto Farm Level",
 		Config
 	)
 
 	Components.Subtitle(
 		Scroll,
-		"Personalize como o Auto Farm irá funcionar.",
+		"Farm automático por level, Sea e missão.",
 		Config
 	)
 
@@ -69,448 +76,183 @@ function FarmConfig.Create(
 	)
 
 	--==================================================
-	-- CATEGORIA DE ATAQUE
+	-- AVISO
 	--==================================================
 
-	local AttackCard =
-		Components.Card(
-			Scroll,
-			Config,
-			Config.Colors.BlueNeon
-		)
-
-	AttackCard.Size =
-		UDim2.new(
-			1,
-			0,
-			0,
-			165
-		)
-
-	local title =
-		Components.Title(
-			AttackCard,
-			"Categoria de ataque",
-			Config
-		)
-
-	title.Position =
-		UDim2.fromOffset(
-			15,
-			8
-		)
-
-	local CurrentAttack =
+	local Warning =
 		Instance.new("TextLabel")
 
-	CurrentAttack.Parent =
-		AttackCard
+	Warning.Parent =
+		Scroll
 
-	CurrentAttack.Position =
-		UDim2.fromOffset(
-			15,
-			47
-		)
-
-	CurrentAttack.Size =
-		UDim2.new(
-			1,
-			-30,
-			0,
-			25
-		)
-
-	CurrentAttack.BackgroundTransparency =
-		1
-
-	CurrentAttack.TextColor3 =
-		Config.Colors.SubText
-
-	CurrentAttack.TextSize = 12
-
-	CurrentAttack.Font =
-		Enum.Font.Gotham
-
-	CurrentAttack.TextXAlignment =
-		Enum.TextXAlignment.Left
-
-	local MeleeButton =
-		Components.Button(
-			AttackCard,
-			"Estilo de luta",
-			Config,
-			Config.Colors.Blue
-		)
-
-	MeleeButton.Position =
-		UDim2.fromOffset(
-			15,
-			88
-		)
-
-	MeleeButton.Size =
-		UDim2.new(
-			0.48,
-			-15,
-			0,
-			44
-		)
-
-	local FruitButton =
-		Components.Button(
-			AttackCard,
-			"Fruta",
-			Config,
-			Config.Colors.Red
-		)
-
-	FruitButton.Position =
-		UDim2.new(
-			0.5,
-			5,
-			0,
-			88
-		)
-
-	FruitButton.Size =
-		UDim2.new(
-			0.48,
-			-15,
-			0,
-			44
-		)
-
-	local function RefreshAttack()
-
-		CurrentAttack.Text =
-			"Selecionado: "
-			..
-			State.Settings.AttackType
-
-	end
-
-	MeleeButton.Activated:Connect(
-		function()
-
-			State:SetSetting(
-				"AttackType",
-				"Estilo de luta"
-			)
-
-			RefreshAttack()
-
-		end
-	)
-
-	FruitButton.Activated:Connect(
-		function()
-
-			State:SetSetting(
-				"AttackType",
-				"Fruta"
-			)
-
-			RefreshAttack()
-
-		end
-	)
-
-	RefreshAttack()
-
-	--==================================================
-	-- ALTURA
-	--==================================================
-
-	local HeightCard =
-		Components.Card(
-			Scroll,
-			Config,
-			Config.Colors.RedNeon
-		)
-
-	HeightCard.Size =
+	Warning.Size =
 		UDim2.new(
 			1,
 			0,
 			0,
-			125
+			62
 		)
 
-	local HeightTitle =
-		Components.Title(
-			HeightCard,
-			"Altura acima do NPC",
-			Config
-		)
+	Warning.BackgroundColor3 =
+		Config.Colors.Red
 
-	HeightTitle.Position =
-		UDim2.fromOffset(
-			15,
-			8
-		)
+	Warning.BackgroundTransparency =
+		0.05
 
-	local HeightButton =
-		Components.Button(
-			HeightCard,
-			"",
-			Config,
-			Config.Colors.Red
-		)
+	Warning.BorderSizePixel =
+		0
 
-	HeightButton.Position =
-		UDim2.fromOffset(
-			15,
-			60
-		)
+	Warning.Text =
+		""
 
-	HeightButton.Size =
-		UDim2.new(
-			1,
-			-30,
-			0,
-			43
-		)
+	Warning.TextColor3 =
+		Config.Colors.Text
 
-	local Heights = {
-		15,
-		24,
-		32,
-		40
-	}
+	Warning.TextSize =
+		12
 
-	local function RefreshHeight()
+	Warning.Font =
+		Enum.Font.GothamBold
 
-		HeightButton.Text =
-			tostring(
-				State.Settings.FarmHeight
-			)
-			..
-			" studs  • clique para alterar"
+	Warning.TextWrapped =
+		true
 
-	end
+	Warning.Visible =
+		false
 
-	HeightButton.Activated:Connect(
-		function()
-
-			local currentIndex = 1
-
-			for index, value in ipairs(
-				Heights
-			) do
-
-				if
-					value
-					==
-					State.Settings.FarmHeight
-				then
-					currentIndex = index
-					break
-				end
-			end
-
-			currentIndex =
-				currentIndex + 1
-
-			if currentIndex > #Heights then
-				currentIndex = 1
-			end
-
-			State:SetSetting(
-				"FarmHeight",
-				Heights[currentIndex]
-			)
-
-			RefreshHeight()
-
-		end
+	Components.Corner(
+		Warning,
+		9
 	)
 
-	RefreshHeight()
+	Components.Stroke(
+		Warning,
+		Config.Colors.RedNeon,
+		1.5,
+		0
+	)
 
 	--==================================================
-	-- VELOCIDADE DO ATAQUE
+	-- STATUS
 	--==================================================
 
-	local SpeedCard =
+	local StatusCard =
 		Components.Card(
 			Scroll,
 			Config,
 			Config.Colors.BlueNeon
 		)
 
-	SpeedCard.Size =
+	StatusCard.Size =
 		UDim2.new(
 			1,
 			0,
 			0,
-			180
+			270
 		)
 
-	local SpeedTitle =
+	local StatusTitle =
 		Components.Title(
-			SpeedCard,
-			"Velocidade",
+			StatusCard,
+			"STATUS DO AUTO FARM",
 			Config
 		)
 
-	SpeedTitle.Position =
+	StatusTitle.Position =
 		UDim2.fromOffset(
 			15,
 			8
 		)
 
-	local AttackSpeed =
-		Components.Button(
-			SpeedCard,
-			"",
-			Config,
-			Config.Colors.Blue
-		)
+	local Info =
+		Instance.new("Frame")
 
-	AttackSpeed.Position =
+	Info.Parent =
+		StatusCard
+
+	Info.Position =
 		UDim2.fromOffset(
 			15,
-			55
+			50
 		)
 
-	AttackSpeed.Size =
+	Info.Size =
 		UDim2.new(
 			1,
 			-30,
-			0,
-			43
-		)
-
-	local MoveSpeed =
-		Components.Button(
-			SpeedCard,
-			"",
-			Config,
-			Config.Colors.Red
-		)
-
-	MoveSpeed.Position =
-		UDim2.fromOffset(
-			15,
-			113
-		)
-
-	MoveSpeed.Size =
-		UDim2.new(
 			1,
-			-30,
-			0,
-			43
+			-65
 		)
 
-	local AttackDelays = {
-		0.16,
-		0.10,
-		0.06
-	}
+	Info.BackgroundTransparency =
+		1
 
-	local TweenSpeeds = {
-		250,
-		350,
-		450
-	}
-
-	local function RefreshSpeed()
-
-		AttackSpeed.Text =
-			"Auto Click: "
-			..
-			string.format(
-				"%.2fs",
-				State.Settings.AttackDelay
-			)
-
-		MoveSpeed.Text =
-			"Movimento: "
-			..
-			tostring(
-				State.Settings.TweenSpeed
-			)
-
-	end
-
-	AttackSpeed.Activated:Connect(
-		function()
-
-			local current = 1
-
-			for i, value in ipairs(
-				AttackDelays
-			) do
-
-				if
-					value
-					==
-					State.Settings.AttackDelay
-				then
-					current = i
-					break
-				end
-			end
-
-			current = current + 1
-
-			if current > #AttackDelays then
-				current = 1
-			end
-
-			State:SetSetting(
-				"AttackDelay",
-				AttackDelays[current]
-			)
-
-			RefreshSpeed()
-
-		end
+	Components.List(
+		Info,
+		4
 	)
 
-	MoveSpeed.Activated:Connect(
-		function()
+	local _, StatusValue =
+		Components.InfoRow(
+			Info,
+			"Status",
+			"Parado",
+			Config
+		)
 
-			local current = 1
+	local _, SeaValue =
+		Components.InfoRow(
+			Info,
+			"Sea atual",
+			"—",
+			Config
+		)
 
-			for i, value in ipairs(
-				TweenSpeeds
-			) do
+	local _, LevelValue =
+		Components.InfoRow(
+			Info,
+			"Level",
+			"—",
+			Config
+		)
 
-				if
-					value
-					==
-					State.Settings.TweenSpeed
-				then
-					current = i
-					break
-				end
-			end
+	local _, QuestValue =
+		Components.InfoRow(
+			Info,
+			"Missão",
+			"—",
+			Config
+		)
 
-			current = current + 1
+	local _, TargetValue =
+		Components.InfoRow(
+			Info,
+			"NPC alvo",
+			"—",
+			Config
+		)
 
-			if current > #TweenSpeeds then
-				current = 1
-			end
+	local _, WeaponValue =
+		Components.InfoRow(
+			Info,
+			"Armamento",
+			"—",
+			Config
+		)
 
-			State:SetSetting(
-				"TweenSpeed",
-				TweenSpeeds[current]
-			)
-
-			RefreshSpeed()
-
-		end
-	)
-
-	RefreshSpeed()
+	local _, HeightValue =
+		Components.InfoRow(
+			Info,
+			"Altura",
+			"—",
+			Config
+		)
 
 	--==================================================
-	-- HAKI
+	-- BOTÃO
 	--==================================================
 
-	local HakiButton =
+	local Toggle =
 		Components.Button(
 			Scroll,
 			"",
@@ -518,47 +260,173 @@ function FarmConfig.Create(
 			Config.Colors.Blue
 		)
 
-	HakiButton.Size =
+	Toggle.Size =
 		UDim2.new(
 			1,
 			0,
 			0,
-			45
+			56
 		)
 
-	local function RefreshHaki()
+	Toggle.TextSize =
+		14
 
-		if State.Settings.AutoBuso then
+	local function RefreshButton()
 
-			HakiButton.Text =
-				"✅ Haki automático: ATIVADO"
+		if State.Settings.AutoFarm then
+
+			Toggle.Text =
+				"🟢 AUTO FARM LEVEL • LIGADO"
+
+			Toggle.BackgroundColor3 =
+				Color3.fromRGB(
+					25,
+					125,
+					75
+				)
 
 		else
 
-			HakiButton.Text =
-				"❌ Haki automático: DESATIVADO"
+			Toggle.Text =
+				"⚪ AUTO FARM LEVEL • DESLIGADO"
 
+			Toggle.BackgroundColor3 =
+				Config.Colors.Blue
 		end
 	end
 
-	HakiButton.Activated:Connect(
+	Toggle.Activated:Connect(
 		function()
 
-			State:SetSetting(
-				"AutoBuso",
-				not State.Settings.AutoBuso
-			)
+			if State.Settings.AutoFarm then
 
-			RefreshHaki()
+				FarmEngine:SetEnabled(
+					false
+				)
 
+			else
+
+				FarmEngine:SetEnabled(
+					true
+				)
+			end
+
+			RefreshButton()
 		end
 	)
 
-	RefreshHaki()
+	--==================================================
+	-- ATUALIZAÇÃO
+	--==================================================
+
+	task.spawn(function()
+
+		while
+			App.Gui
+			and
+			App.Gui.Parent
+		do
+
+			local sea =
+				FarmEngine:GetSea()
+
+			local level =
+				FarmEngine:GetLevel()
+
+			-- SEA TOPBAR
+
+			if App.SeaBadge then
+
+				if sea > 0 then
+
+					App.SeaBadge.Text =
+						"SEA "
+						..
+						tostring(sea)
+
+				else
+
+					App.SeaBadge.Text =
+						"SEA ?"
+				end
+			end
+
+			-- STATUS
+
+			StatusValue.Text =
+				tostring(
+					State.Runtime.Status
+				)
+
+			SeaValue.Text =
+				sea > 0
+					and
+					("Sea " .. tostring(sea))
+					or
+					"Desconhecido"
+
+			LevelValue.Text =
+				tostring(level)
+
+			QuestValue.Text =
+				tostring(
+					State.Runtime.Quest
+				)
+
+			TargetValue.Text =
+				tostring(
+					State.Runtime.Target
+				)
+
+			WeaponValue.Text =
+				tostring(
+					State.Settings.AttackType
+				)
+
+			HeightValue.Text =
+				tostring(
+					State.Settings.FarmHeight
+				)
+				..
+				" studs"
+
+			-- AVISO 5 SEGUNDOS
+
+			if
+				State.Runtime.Warning
+					~=
+				""
+				and
+				tick()
+					<
+				State.Runtime.WarningUntil
+			then
+
+				Warning.Visible =
+					true
+
+				Warning.Text =
+					"⚠️ "
+					..
+					State.Runtime.Warning
+
+			else
+
+				Warning.Visible =
+					false
+			end
+
+			RefreshButton()
+
+			task.wait(0.20)
+		end
+	end)
+
+	RefreshButton()
 
 	Debug.Log(
-		"Configurações de Farm criadas."
+		"✅ Aba Farm criada."
 	)
 end
 
-return FarmConfig
+return FarmUI
