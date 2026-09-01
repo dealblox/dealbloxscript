@@ -1,7 +1,6 @@
 --==================================================
 -- DEAL BLOX
 -- MODULES / FARM
--- Motor do Auto Farm
 --==================================================
 
 local Farm = {}
@@ -33,21 +32,23 @@ function Farm.Create(
 	local Player =
 		Players.LocalPlayer
 
-	--==================================================
-	-- CONTROLE DE REEXECUÇÃO
-	--==================================================
-
 	local Environment =
 		getgenv and getgenv() or _G
 
 	Environment.DealBloxFarmToken =
-		(Environment.DealBloxFarmToken or 0) + 1
+		(
+			Environment.DealBloxFarmToken
+			or
+			0
+		)
+		+
+		1
 
-	local MyToken =
+	local Token =
 		Environment.DealBloxFarmToken
 
 	--==================================================
-	-- HELPERS
+	-- CHARACTER
 	--==================================================
 
 	local function GetCharacter()
@@ -76,43 +77,60 @@ function Farm.Create(
 			or
 			humanoid.Health <= 0
 		then
+
 			return nil
 		end
 
 		return character, humanoid, root
 	end
 
+	--==================================================
+	-- LEVEL
+	--==================================================
+
 	local function GetLevel()
 
-		local data =
-			Player:FindFirstChild("Data")
+		local Data =
+			Player:FindFirstChild(
+				"Data"
+			)
 
-		if not data then
+		if not Data then
 			return 0
 		end
 
-		local level =
-			data:FindFirstChild("Level")
+		local Level =
+			Data:FindFirstChild(
+				"Level"
+			)
 
-		if not level then
+		if not Level then
 			return 0
 		end
 
-		return tonumber(level.Value) or 0
+		return tonumber(
+			Level.Value
+		)
+		or
+		0
 	end
+
+	--==================================================
+	-- REMOTE
+	--==================================================
 
 	local function GetRemote()
 
-		local remotes =
+		local Remotes =
 			ReplicatedStorage:FindFirstChild(
 				"Remotes"
 			)
 
-		if not remotes then
+		if not Remotes then
 			return nil
 		end
 
-		return remotes:FindFirstChild(
+		return Remotes:FindFirstChild(
 			"CommF_"
 		)
 	end
@@ -121,7 +139,9 @@ function Farm.Create(
 	-- AVISO
 	--==================================================
 
-	local function ShowWarning(text)
+	local function Warning(
+		text
+	)
 
 		State:SetWarning(
 			text,
@@ -133,14 +153,18 @@ function Farm.Create(
 			StarterGui:SetCore(
 				"SendNotification",
 				{
-					Title = "DEAL BLOX",
-					Text = text,
-					Duration = 5
+					Title =
+						"DEAL BLOX",
+
+					Text =
+						text,
+
+					Duration =
+						5
 				}
 			)
 
 		end)
-
 	end
 
 	--==================================================
@@ -172,27 +196,39 @@ function Farm.Create(
 
 		if currentSea == 0 then
 
-			ShowWarning(
-				"Este mapa não foi reconhecido pelo Auto Farm."
+			State:SetRuntime(
+				"Status",
+				"Mapa não reconhecido"
+			)
+
+			Warning(
+				"O Deal Blox não reconheceu este Sea."
 			)
 
 			return false
 		end
 
-		if currentSea ~= requiredSea then
-
-			local message =
-				"Seu level "
-				.. tostring(level)
-				.. " pertence ao Sea "
-				.. tostring(requiredSea)
-				.. ". Vá para o Sea correto para usar o Auto Farm."
-
-			ShowWarning(message)
+		if
+			currentSea
+			~=
+			requiredSea
+		then
 
 			State:SetRuntime(
 				"Status",
 				"Sea incorreto"
+			)
+
+			Warning(
+				"Seu level "
+				..
+				tostring(level)
+				..
+				" pertence ao Sea "
+				..
+				tostring(requiredSea)
+				..
+				". Vá para o Sea correto para usar o Auto Farm."
 			)
 
 			return false
@@ -202,31 +238,38 @@ function Farm.Create(
 	end
 
 	--==================================================
-	-- MOVIMENTAÇÃO
+	-- MOVIMENTO
 	--==================================================
 
-	local CurrentTween = nil
+	local CurrentTween =
+		nil
 
 	local function StopTween()
 
 		if CurrentTween then
 
 			pcall(function()
-				CurrentTween:Cancel()
-			end)
 
+				CurrentTween:Cancel()
+
+			end)
 		end
 
-		CurrentTween = nil
+		CurrentTween =
+			nil
 	end
 
-	local function MoveTo(targetCFrame)
+	local function MoveTo(
+		targetCFrame
+	)
 
-		if not State.Settings.AutoFarm then
+		if
+			not State.Settings.AutoFarm
+		then
 			return false
 		end
 
-		local character, humanoid, root =
+		local _, _, root =
 			GetCharacter()
 
 		if not root then
@@ -240,7 +283,7 @@ function Farm.Create(
 				targetCFrame.Position
 			).Magnitude
 
-		if distance <= 8 then
+		if distance <= 10 then
 
 			root.CFrame =
 				targetCFrame
@@ -252,24 +295,28 @@ function Farm.Create(
 
 		local speed =
 			math.max(
-				State.Settings.TweenSpeed,
+				State.Settings.TweenSpeed
+					or
+					350,
 				100
 			)
 
-		local duration =
+		local time =
 			math.clamp(
 				distance / speed,
-				0.08,
+				0.10,
 				15
 			)
 
 		CurrentTween =
 			TweenService:Create(
 				root,
+
 				TweenInfo.new(
-					duration,
+					time,
 					Enum.EasingStyle.Linear
 				),
+
 				{
 					CFrame =
 						targetCFrame
@@ -278,21 +325,24 @@ function Farm.Create(
 
 		CurrentTween:Play()
 
-		local start =
+		local started =
 			tick()
 
 		while
 			State.Settings.AutoFarm
 			and
-			root.Parent
-			and
 			CurrentTween
 			and
 			CurrentTween.PlaybackState
-				== Enum.PlaybackState.Playing
+				==
+				Enum.PlaybackState.Playing
 		do
 
-			if tick() - start > duration + 1 then
+			if
+				tick() - started
+				>
+				time + 1
+			then
 				break
 			end
 
@@ -308,7 +358,9 @@ function Farm.Create(
 
 	local function ActivateBuso()
 
-		if not State.Settings.AutoBuso then
+		if
+			not State.Settings.AutoBuso
+		then
 			return
 		end
 
@@ -319,28 +371,31 @@ function Farm.Create(
 			return
 		end
 
-		if character:FindFirstChild(
-			"HasBuso"
-		) then
+		if
+			character:FindFirstChild(
+				"HasBuso"
+			)
+		then
 			return
 		end
 
-		local remote =
+		local Remote =
 			GetRemote()
 
-		if remote then
+		if Remote then
 
 			pcall(function()
-				remote:InvokeServer(
+
+				Remote:InvokeServer(
 					"Buso"
 				)
-			end)
 
+			end)
 		end
 	end
 
 	--==================================================
-	-- EQUIPAR CATEGORIA DE ATAQUE
+	-- ARMAMENTO
 	--==================================================
 
 	local function EquipAttack()
@@ -348,28 +403,40 @@ function Farm.Create(
 		local character, humanoid =
 			GetCharacter()
 
-		if not character or not humanoid then
-			return
+		if
+			not character
+			or
+			not humanoid
+		then
+			return nil
 		end
+
+		local WeaponMap = {
+
+			["Estilo de luta"] =
+				"Melee",
+
+			["Espada"] =
+				"Sword",
+
+			["Arma"] =
+				"Gun",
+
+			["Fruta"] =
+				"Blox Fruit"
+		}
 
 		local selected =
 			State.Settings.AttackType
 
-		local tooltip = nil
+		local targetTooltip =
+			WeaponMap[selected]
 
-		if selected == "Estilo de luta" then
-			tooltip = "Melee"
-
-		elseif selected == "Fruta" then
-			tooltip = "Blox Fruit"
-
+		if not targetTooltip then
+			return nil
 		end
 
-		if not tooltip then
-			return
-		end
-
-		-- Já equipado
+		-- Já está equipado
 
 		for _, tool in ipairs(
 			character:GetChildren()
@@ -378,40 +445,51 @@ function Farm.Create(
 			if
 				tool:IsA("Tool")
 				and
-				tool.ToolTip == tooltip
+				tool.ToolTip
+					==
+				targetTooltip
 			then
+
 				return tool
 			end
 		end
 
-		-- Procurar na mochila
+		-- Mochila
 
-		local backpack =
+		local Backpack =
 			Player:FindFirstChild(
 				"Backpack"
 			)
 
-		if not backpack then
-			return
+		if not Backpack then
+			return nil
 		end
 
 		for _, tool in ipairs(
-			backpack:GetChildren()
+			Backpack:GetChildren()
 		) do
 
 			if
 				tool:IsA("Tool")
 				and
-				tool.ToolTip == tooltip
+				tool.ToolTip
+					==
+				targetTooltip
 			then
 
-				humanoid:EquipTool(
-					tool
-				)
+				pcall(function()
+
+					humanoid:EquipTool(
+						tool
+					)
+
+				end)
 
 				return tool
 			end
 		end
+
+		return nil
 	end
 
 	--==================================================
@@ -435,9 +513,10 @@ function Farm.Create(
 		if tool then
 
 			pcall(function()
-				tool:Activate()
-			end)
 
+				tool:Activate()
+
+			end)
 		end
 
 		pcall(function()
@@ -451,7 +530,7 @@ function Farm.Create(
 				)
 			)
 
-			task.wait(0.025)
+			task.wait(0.02)
 
 			VirtualUser:Button1Up(
 				Vector2.new(
@@ -464,40 +543,40 @@ function Farm.Create(
 	end
 
 	--==================================================
-	-- QUEST ATUAL
+	-- QUEST CORRETA?
 	--==================================================
 
 	local function HasCorrectQuest(
-		questData
+		QuestData
 	)
 
-		local playerGui =
+		local PlayerGui =
 			Player:FindFirstChild(
 				"PlayerGui"
 			)
 
-		if not playerGui then
+		if not PlayerGui then
 			return false
 		end
 
-		local main =
-			playerGui:FindFirstChild(
+		local Main =
+			PlayerGui:FindFirstChild(
 				"Main"
 			)
 
-		if not main then
+		if not Main then
 			return false
 		end
 
-		local quest =
-			main:FindFirstChild(
+		local Quest =
+			Main:FindFirstChild(
 				"Quest"
 			)
 
 		if
-			not quest
+			not Quest
 			or
-			not quest.Visible
+			not Quest.Visible
 		then
 			return false
 		end
@@ -505,7 +584,7 @@ function Farm.Create(
 		local success, title =
 			pcall(function()
 
-				return quest
+				return Quest
 					.Container
 					.QuestTitle
 					.Title
@@ -520,11 +599,13 @@ function Farm.Create(
 		return string.find(
 			string.lower(title),
 			string.lower(
-				questData.Mob
+				QuestData.Mob
 			),
 			1,
 			true
-		) ~= nil
+		)
+		~=
+		nil
 	end
 
 	--==================================================
@@ -532,11 +613,13 @@ function Farm.Create(
 	--==================================================
 
 	local function StartQuest(
-		questData
+		QuestData
 	)
 
-		if not State.Settings.AutoFarm then
-			return false
+		if
+			not State.Settings.AutoFarm
+		then
+			return
 		end
 
 		State:SetRuntime(
@@ -546,11 +629,11 @@ function Farm.Create(
 
 		State:SetRuntime(
 			"Quest",
-			questData.Mob
+			QuestData.Mob
 		)
 
 		MoveTo(
-			questData.QuestPos
+			QuestData.QuestPos
 				*
 			CFrame.new(
 				0,
@@ -559,38 +642,38 @@ function Farm.Create(
 			)
 		)
 
-		if not State.Settings.AutoFarm then
-			return false
+		if
+			not State.Settings.AutoFarm
+		then
+			return
 		end
 
-		task.wait(0.25)
+		task.wait(0.30)
 
-		local remote =
+		local Remote =
 			GetRemote()
 
-		if not remote then
+		if not Remote then
 
 			State:SetRuntime(
 				"Status",
 				"Remote não encontrado"
 			)
 
-			return false
+			return
 		end
 
 		pcall(function()
 
-			remote:InvokeServer(
+			Remote:InvokeServer(
 				"StartQuest",
-				questData.Quest,
-				questData.QuestNum
+				QuestData.Quest,
+				QuestData.QuestNum
 			)
 
 		end)
 
-		task.wait(0.55)
-
-		return true
+		task.wait(0.60)
 	end
 
 	--==================================================
@@ -598,26 +681,29 @@ function Farm.Create(
 	--==================================================
 
 	local function FindTarget(
-		questData
+		QuestData
 	)
 
-		local enemies =
+		local Enemies =
 			workspace:FindFirstChild(
 				"Enemies"
 			)
 
-		if not enemies then
+		if not Enemies then
 			return nil
 		end
 
-		local closest = nil
-		local closestDistance = math.huge
-
-		local _, _, root =
+		local _, _, playerRoot =
 			GetCharacter()
 
+		local Closest =
+			nil
+
+		local ClosestDistance =
+			math.huge
+
 		for _, enemy in ipairs(
-			enemies:GetChildren()
+			Enemies:GetChildren()
 		) do
 
 			local humanoid =
@@ -625,108 +711,119 @@ function Farm.Create(
 					"Humanoid"
 				)
 
-			local enemyRoot =
+			local root =
 				enemy:FindFirstChild(
 					"HumanoidRootPart"
 				)
 
-			local nameMatches =
+			local matches =
 				string.find(
 					string.lower(
 						enemy.Name
 					),
 					string.lower(
-						questData.Mob
+						QuestData.Mob
 					),
 					1,
 					true
 				)
 
 			if
-				nameMatches
+				matches
 				and
 				humanoid
 				and
-				enemyRoot
+				root
 				and
 				humanoid.Health > 0
 			then
 
-				local distance = 0
+				local distance =
+					0
 
-				if root then
+				if playerRoot then
 
 					distance =
 						(
-							root.Position
+							playerRoot.Position
 							-
-							enemyRoot.Position
+							root.Position
 						).Magnitude
-
 				end
 
-				if distance < closestDistance then
+				if
+					distance
+					<
+					ClosestDistance
+				then
 
-					closest = enemy
-					closestDistance = distance
+					Closest =
+						enemy
 
+					ClosestDistance =
+						distance
 				end
 			end
 		end
 
-		return closest
+		return Closest
 	end
 
 	--==================================================
 	-- LUTAR
 	--==================================================
 
-	local function FightTarget(
-		target,
-		questData
+	local function Fight(
+		Target,
+		QuestData
 	)
 
 		local humanoid =
-			target:FindFirstChildOfClass(
+			Target:FindFirstChildOfClass(
 				"Humanoid"
 			)
 
-		local targetRoot =
-			target:FindFirstChild(
+		local enemyRoot =
+			Target:FindFirstChild(
 				"HumanoidRootPart"
 			)
 
-		if not humanoid or not targetRoot then
+		if
+			not humanoid
+			or
+			not enemyRoot
+		then
 			return
 		end
-
-		State:SetRuntime(
-			"Target",
-			questData.Mob
-		)
 
 		State:SetRuntime(
 			"Status",
 			"Farmando"
 		)
 
+		State:SetRuntime(
+			"Target",
+			QuestData.Mob
+		)
+
 		ActivateBuso()
+
 		EquipAttack()
 
 		while
 			State.Settings.AutoFarm
 			and
-			target.Parent
+			Target.Parent
 			and
 			humanoid.Parent
 			and
 			humanoid.Health > 0
 		do
 
-			local character, playerHumanoid, root =
+			local _, _, playerRoot =
 				GetCharacter()
 
-			if not root then
+			if not playerRoot then
 
 				State:SetRuntime(
 					"Status",
@@ -738,22 +835,20 @@ function Farm.Create(
 				continue
 			end
 
-			if not targetRoot.Parent then
+			if not enemyRoot.Parent then
 				break
 			end
 
-			--==================================================
-			-- FICAR ACIMA DO NPC
-			--==================================================
+			local enemyPosition =
+				enemyRoot.Position
 
 			local height =
 				State.Settings.FarmHeight
-
-			local targetPosition =
-				targetRoot.Position
+				or
+				24
 
 			local above =
-				targetPosition
+				enemyPosition
 				+
 				Vector3.new(
 					0,
@@ -761,32 +856,32 @@ function Farm.Create(
 					0
 				)
 
-			root.AssemblyLinearVelocity =
-				Vector3.zero
-
-			root.AssemblyAngularVelocity =
-				Vector3.zero
-
-			root.CFrame =
-				CFrame.new(
-					above,
-					targetPosition
-				)
-
-			-- Evitar colisão local
 			pcall(function()
 
-				root.CanCollide =
-					false
+				playerRoot.AssemblyLinearVelocity =
+					Vector3.zero
+
+				playerRoot.AssemblyAngularVelocity =
+					Vector3.zero
+
+				playerRoot.CFrame =
+					CFrame.new(
+						above,
+						enemyPosition
+					)
 
 			end)
 
 			ActivateBuso()
+
 			EquipAttack()
+
 			Attack()
 
 			task.wait(
 				State.Settings.AttackDelay
+					or
+					0.10
 			)
 		end
 
@@ -797,10 +892,10 @@ function Farm.Create(
 	end
 
 	--==================================================
-	-- UM CICLO DO FARM
+	-- FARM STEP
 	--==================================================
 
-	local function FarmStep()
+	local function Step()
 
 		local level =
 			GetLevel()
@@ -823,7 +918,11 @@ function Farm.Create(
 				level
 			)
 
-		if sea ~= requiredSea then
+		if
+			sea
+			~=
+			requiredSea
+		then
 
 			State:SetSetting(
 				"AutoFarm",
@@ -835,24 +934,28 @@ function Farm.Create(
 				"Sea incorreto"
 			)
 
-			ShowWarning(
+			Warning(
 				"Seu level "
-				.. level
-				.. " pertence ao Sea "
-				.. requiredSea
-				.. ". Vá para o Sea correto."
+				..
+				tostring(level)
+				..
+				" pertence ao Sea "
+				..
+				tostring(requiredSea)
+				..
+				". Vá para o Sea correto."
 			)
 
 			return
 		end
 
-		local questData =
+		local QuestData =
 			Quests.GetForLevel(
 				level,
 				sea
 			)
 
-		if not questData then
+		if not QuestData then
 
 			State:SetRuntime(
 				"Status",
@@ -866,34 +969,32 @@ function Farm.Create(
 
 		State:SetRuntime(
 			"Quest",
-			questData.Mob
+			QuestData.Mob
 		)
 
-		-- Quest errada ou nenhuma quest
-
-		if not HasCorrectQuest(
-			questData
-		) then
+		if
+			not HasCorrectQuest(
+				QuestData
+			)
+		then
 
 			StartQuest(
-				questData
+				QuestData
 			)
 
 			return
 		end
 
-		-- Procurar NPC
-
-		local target =
+		local Target =
 			FindTarget(
-				questData
+				QuestData
 			)
 
-		if target then
+		if Target then
 
-			FightTarget(
-				target,
-				questData
+			Fight(
+				Target,
+				QuestData
 			)
 
 		else
@@ -905,20 +1006,22 @@ function Farm.Create(
 
 			State:SetRuntime(
 				"Target",
-				questData.Mob
+				QuestData.Mob
 			)
 
 			MoveTo(
-				questData.MobPos
+				QuestData.MobPos
 					*
 				CFrame.new(
 					0,
-					State.Settings.FarmHeight,
+					State.Settings.FarmHeight
+						or
+						24,
 					0
 				)
 			)
 
-			task.wait(0.8)
+			task.wait(0.7)
 		end
 	end
 
@@ -928,7 +1031,9 @@ function Farm.Create(
 
 	local API = {}
 
-	function API:SetEnabled(enabled)
+	function API:SetEnabled(
+		enabled
+	)
 
 		enabled =
 			enabled == true
@@ -956,107 +1061,118 @@ function Farm.Create(
 			)
 
 			return true
-
-		else
-
-			State:SetSetting(
-				"AutoFarm",
-				false
-			)
-
-			StopTween()
-
-			State:SetRuntime(
-				"Status",
-				"Parado"
-			)
-
-			State:SetRuntime(
-				"Target",
-				"Nenhum"
-			)
-
-			return true
 		end
+
+		State:SetSetting(
+			"AutoFarm",
+			false
+		)
+
+		StopTween()
+
+		State:SetRuntime(
+			"Status",
+			"Parado"
+		)
+
+		State:SetRuntime(
+			"Target",
+			"Nenhum"
+		)
+
+		return true
 	end
 
 	function API:GetSea()
+
 		return Quests.GetSea()
 	end
 
+	function API:GetLevel()
+
+		return GetLevel()
+	end
+
 	function API:GetRequiredSea()
+
 		return Quests.GetRequiredSea(
 			GetLevel()
 		)
 	end
 
-	function API:GetLevel()
-		return GetLevel()
-	end
-
 	--==================================================
-	-- NOCLIP LOCAL
+	-- NOCLIP
 	--==================================================
 
-	RunService.Stepped:Connect(function()
+	RunService.Stepped:Connect(
+		function()
 
-		if
-			not State.Settings.AutoFarm
-			or
-			Environment.DealBloxFarmToken
-				~= MyToken
-		then
-			return
-		end
+			if
+				Environment.DealBloxFarmToken
+					~=
+				Token
+			then
+				return
+			end
 
-		local character =
-			Player.Character
+			if
+				not State.Settings.AutoFarm
+			then
+				return
+			end
 
-		if not character then
-			return
-		end
+			local character =
+				Player.Character
 
-		for _, object in ipairs(
-			character:GetDescendants()
-		) do
+			if not character then
+				return
+			end
 
-			if object:IsA(
-				"BasePart"
-			) then
+			for _, part in ipairs(
+				character:GetDescendants()
+			) do
 
-				object.CanCollide =
-					false
+				if
+					part:IsA(
+						"BasePart"
+					)
+				then
+
+					part.CanCollide =
+						false
+				end
 			end
 		end
-	end)
+	)
 
 	--==================================================
-	-- LOOP PRINCIPAL
+	-- LOOP
 	--==================================================
 
 	task.spawn(function()
 
 		Debug.Log(
-			"Motor Auto Farm iniciado."
+			"Motor de Auto Farm iniciado."
 		)
 
 		while
 			Environment.DealBloxFarmToken
-				== MyToken
+				==
+			Token
 		do
 
 			if State.Settings.AutoFarm then
 
 				local success, errorMessage =
 					xpcall(
-						FarmStep,
+						Step,
 						debug.traceback
 					)
 
 				if not success then
 
 					Debug.Warn(
-						"Auto Farm: "
+						"Erro no Auto Farm: "
 						..
 						tostring(
 							errorMessage
@@ -1070,14 +1186,13 @@ function Farm.Create(
 
 					task.wait(1)
 				end
-
 			else
+
 				task.wait(0.25)
 			end
 
 			task.wait(0.05)
 		end
-
 	end)
 
 	return API
