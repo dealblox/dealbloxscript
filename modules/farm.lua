@@ -55,12 +55,28 @@ function Farm.Create(
 	-- CONSTANTS
 	--==================================================
 
-	local TIKI_SUBMARINE =
-		CFrame.new(
+	-- Coordenada aproximada apenas para carregar a região
+	-- do Sub Port 01. O destino final NÃO usa mais
+	-- essa posição: o script procura o próprio NPC
+	-- Submarine Worker no mapa.
+	local TIKI_SUBMARINE_FALLBACK =
+		Vector3.new(
 			-16269.7041,
 			25.2288,
 			1373.6596
 		)
+
+	local TIKI_APPROACH_HEIGHT =
+		180
+
+	local WORKER_APPROACH_HEIGHT =
+		65
+
+	local WORKER_FINAL_OFFSET =
+		7
+
+	local WORKER_SEARCH_TIME =
+		8
 
 	local SAFE_OCEAN_HEIGHT =
 		450
@@ -623,6 +639,161 @@ function Farm.Create(
 		)
 	end
 
+	--==================================================
+	-- SUBMARINE WORKER
+	--==================================================
+
+	local function NormalizeName(
+		text
+	)
+		text =
+			string.lower(
+				tostring(
+					text
+					or
+					""
+				)
+			)
+
+		text =
+			string.gsub(
+				text,
+				"[%s%p_]+",
+				""
+			)
+
+		return text
+	end
+
+	local function FindTikiLocation()
+		local origin =
+			workspace:
+			FindFirstChild(
+				"_WorldOrigin"
+			)
+
+		local locations =
+			origin
+			and
+			origin:
+			FindFirstChild(
+				"Locations"
+			)
+
+		if not locations then
+			return nil
+		end
+
+		for _, location in ipairs(
+			locations:GetChildren()
+		) do
+			local name =
+				NormalizeName(
+					location.Name
+				)
+
+			if
+				string.find(
+					name,
+					"tiki",
+					1,
+					true
+				)
+			then
+				return location
+			end
+		end
+
+		return nil
+	end
+
+	local function FindSubmarineWorkerOnce()
+		for _, object in ipairs(
+			workspace:GetDescendants()
+		) do
+			if
+				object:IsA(
+					"Model"
+				)
+			then
+				local name =
+					NormalizeName(
+						object.Name
+					)
+
+				if
+					string.find(
+						name,
+						"submarine",
+						1,
+						true
+					)
+					and
+					string.find(
+						name,
+						"worker",
+						1,
+						true
+					)
+				then
+					local part =
+						object:
+						FindFirstChild(
+							"HumanoidRootPart"
+						)
+						or
+						object:
+						FindFirstChild(
+							"Head"
+						)
+						or
+						object:
+						FindFirstChildWhichIsA(
+							"BasePart",
+							true
+						)
+
+					if part then
+						return object, part
+					end
+				end
+			end
+		end
+
+		return nil, nil
+	end
+
+	local function WaitForSubmarineWorker()
+		local started =
+			tick()
+
+		while
+			State.Settings.AutoFarm
+			and
+			tick() - started
+				<
+				WORKER_SEARCH_TIME
+		do
+			local worker,
+				part =
+				FindSubmarineWorkerOnce()
+
+			if
+				worker
+				and
+				part
+			then
+				return worker, part
+			end
+
+			task.wait(
+				0.25
+			)
+		end
+
+		return nil, nil
+	end
+
 	local function MoveToTikiSubmarine()
 		if
 			not State.Settings.AutoFarm
@@ -635,15 +806,260 @@ function Farm.Create(
 			"Indo para Tiki"
 		)
 
-		return SafeLongTravel(
-			TIKI_SUBMARINE
-				*
-				CFrame.new(
-					0,
-					4,
-					0
-				)
+		-- Primeiro: chega ALTO na região da Tiki,
+		-- sem descer perto da água.
+		local tiki =
+			FindTikiLocation()
+
+		local tikiPosition =
+			nil
+
+		if tiki then
+			if tiki:IsA(
+				"BasePart"
+			) then
+				tikiPosition =
+					tiki.Position
+
+			elseif tiki:IsA(
+				"Model"
+			) then
+				local ok,
+					pivot =
+					pcall(function()
+						return tiki:
+							GetPivot()
+					end)
+
+				if ok then
+					tikiPosition =
+						pivot.Position
+				end
+			end
+		end
+
+		tikiPosition =
+			tikiPosition
+			or
+			TIKI_SUBMARINE_FALLBACK
+
+		local highApproach =
+			CFrame.new(
+				tikiPosition.X,
+				math.max(
+					TIKI_APPROACH_HEIGHT,
+					tikiPosition.Y
+						+
+						TIKI_APPROACH_HEIGHT
+				),
+				tikiPosition.Z
+			)
+
+		if
+			not SafeLongTravel(
+				highApproach
+			)
+		then
+			return false
+		end
+
+		if
+			not State.Settings.AutoFarm
+		then
+			return false
+		end
+
+		State:SetRuntime(
+			"Status",
+			"Procurando Submarine Worker"
 		)
+
+		-- A essa altura a região já deve estar carregada.
+		local worker,
+			workerPart =
+			WaitForSubmarineWorker()
+
+		if
+			not worker
+			or
+			not workerPart
+		then
+			-- Aproxima da área conhecida, mas continua
+			-- no alto. Isso ajuda StreamingEnabled a
+			-- carregar o Sub Port sem tocar na água.
+			local fallbackHigh =
+				CFrame.new(
+					TIKI_SUBMARINE_FALLBACK.X,
+					TIKI_SUBMARINE_FALLBACK.Y
+						+
+						TIKI_APPROACH_HEIGHT,
+					TIKI_SUBMARINE_FALLBACK.Z
+				)
+
+			if
+				not SafeLongTravel(
+					fallbackHigh
+				)
+			then
+				return false
+			end
+
+			worker,
+			workerPart =
+				WaitForSubmarineWorker()
+		end
+
+		if
+			not worker
+			or
+			not workerPart
+		then
+			State:SetRuntime(
+				"Status",
+				"NPC do submarino não encontrado"
+			)
+
+			Warning(
+				"O Deal Blox chegou à Tiki, mas não encontrou o Submarine Worker carregado no mapa."
+			)
+
+			return false
+		end
+
+		Log(
+			"✅ Submarine Worker encontrado: "
+			..
+			tostring(
+				worker:GetFullName()
+			)
+		)
+
+		local workerPosition =
+			workerPart.Position
+
+		-- Primeiro alinha X/Z ACIMA do NPC.
+		-- Assim não atravessamos água na altura baixa.
+		local _, _, root =
+			GetCharacter()
+
+		if not root then
+			return false
+		end
+
+		State:SetRuntime(
+			"Status",
+			"Alinhando com submarino"
+		)
+
+		local workerHighY =
+			math.max(
+				root.Position.Y,
+				workerPosition.Y
+					+
+					WORKER_APPROACH_HEIGHT
+			)
+
+		local aboveWorker =
+			CFrame.new(
+				workerPosition.X,
+				workerHighY,
+				workerPosition.Z
+			)
+
+		if
+			not TweenTo(
+				aboveWorker
+			)
+		then
+			return false
+		end
+
+		if
+			not State.Settings.AutoFarm
+		then
+			return false
+		end
+
+		-- Depois desce NA VERTICAL até ficar alguns
+		-- studs acima do NPC, que está em área segura.
+		State:SetRuntime(
+			"Status",
+			"Descendo no Sub Port"
+		)
+
+		local nearWorker =
+			CFrame.new(
+				workerPosition
+					+
+					Vector3.new(
+						0,
+						WORKER_FINAL_OFFSET,
+						0
+					)
+			)
+
+		if
+			not TweenTo(
+				nearWorker,
+				LONG_TRAVEL_VERTICAL_SPEED
+			)
+		then
+			return false
+		end
+
+		StopTween()
+
+		local _, humanoid, finalRoot =
+			GetCharacter()
+
+		if
+			not humanoid
+			or
+			not finalRoot
+		then
+			return false
+		end
+
+		pcall(function()
+			finalRoot.AssemblyLinearVelocity =
+				Vector3.zero
+
+			finalRoot.AssemblyAngularVelocity =
+				Vector3.zero
+		end)
+
+		local distance =
+			(
+				finalRoot.Position
+				-
+				workerPart.Position
+			).Magnitude
+
+		Log(
+			"Distância do Submarine Worker: "
+			..
+			string.format(
+				"%.1f",
+				distance
+			)
+			..
+			" studs"
+		)
+
+		if distance > 25 then
+			State:SetRuntime(
+				"Status",
+				"Longe do submarino"
+			)
+
+			Warning(
+				"Não consegui chegar perto o bastante do Submarine Worker."
+			)
+
+			return false
+		end
+
+		return true
 	end
 
 	--==================================================
@@ -711,7 +1127,21 @@ function Farm.Create(
 			return false
 		end
 
-		task.wait(1.5)
+		local _, humanoidBefore,
+			rootBefore =
+			GetCharacter()
+
+		if
+			not humanoidBefore
+			or
+			not rootBefore
+		then
+			return false
+		end
+
+		task.wait(
+			0.75
+		)
 
 		local Remote =
 			GetSubmarineRemote()
@@ -719,21 +1149,37 @@ function Farm.Create(
 		if not Remote then
 			State:SetRuntime(
 				"Status",
-				"Submarino não encontrado"
+				"Remote do submarino não encontrado"
 			)
 
 			Warning(
-				"Não encontrei o Remote do submarino. Entre na Submerged Island manualmente e ligue o Auto Farm novamente."
+				"Não encontrei o Remote do Submarine Worker."
 			)
 
 			return false
 		end
 
+		State:SetRuntime(
+			"Status",
+			"Acionando submarino"
+		)
+
+		StopTween()
+
+		pcall(function()
+			rootBefore.AssemblyLinearVelocity =
+				Vector3.zero
+
+			rootBefore.AssemblyAngularVelocity =
+				Vector3.zero
+		end)
+
 		local success, result =
 			pcall(function()
-				return Remote:InvokeServer(
-					"TravelToSubmergedIsland"
-				)
+				return Remote:
+					InvokeServer(
+						"TravelToSubmergedIsland"
+					)
 			end)
 
 		if not success then
@@ -749,10 +1195,18 @@ function Farm.Create(
 			)
 
 			Warning(
-				"Não consegui entrar na Submerged Island. Verifique se sua conta já liberou o acesso pelo Submarine Worker."
+				"Não consegui acionar o Submarine Worker."
 			)
 
 			return false
+		end
+
+		if result ~= nil then
+			Log(
+				"Resposta do submarino: "
+				..
+				tostring(result)
+			)
 		end
 
 		State:SetRuntime(
@@ -766,9 +1220,13 @@ function Farm.Create(
 		while
 			State.Settings.AutoFarm
 			and
-			tick() - started < 10
+			tick() - started
+				<
+				10
 		do
-			task.wait(0.25)
+			task.wait(
+				0.20
+			)
 
 			if IsInsideSubmerged(
 				QuestData
@@ -779,10 +1237,43 @@ function Farm.Create(
 
 				return true
 			end
+
+			local character =
+				Player.Character
+
+			local humanoid =
+				character
+				and
+				character:
+				FindFirstChildOfClass(
+					"Humanoid"
+				)
+
+			if
+				not humanoid
+				or
+				humanoid.Health <= 0
+			then
+				State:SetRuntime(
+					"Status",
+					"Morreu antes da viagem"
+				)
+
+				Warning(
+					"O personagem morreu antes de entrar na Submerged. O Auto Farm foi parado."
+				)
+
+				return false
+			end
 		end
 
+		State:SetRuntime(
+			"Status",
+			"Submerged não liberada"
+		)
+
 		Warning(
-			"O submarino foi acionado, mas a Submerged Island não foi detectada."
+			"O submarino respondeu, mas não houve viagem. Verifique se você já derrotou o Tyrant of the Skies e liberou a Submerged Island."
 		)
 
 		return false
