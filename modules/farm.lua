@@ -1,6 +1,7 @@
 --==================================================
 -- DEAL BLOX
 -- MODULES / FARM
+-- Auto Farm modular
 --==================================================
 
 local Farm = {}
@@ -10,6 +11,9 @@ function Farm.Create(
 	Quests,
 	Debug
 )
+	--==================================================
+	-- SERVICES
+	--==================================================
 
 	local Players =
 		game:GetService("Players")
@@ -48,11 +52,96 @@ function Farm.Create(
 		Environment.DealBloxFarmToken
 
 	--==================================================
+	-- CONSTANTS
+	--==================================================
+
+	local TIKI_SUBMARINE =
+		CFrame.new(
+			-16269.7041,
+			25.2288,
+			1373.6596
+		)
+
+	local SAFE_OCEAN_HEIGHT =
+		450
+
+	-- Distância horizontal mínima para considerar
+	-- que o personagem está viajando entre ilhas.
+	local LONG_TRAVEL_DISTANCE =
+		1200
+
+	-- Altura extra acima do ponto mais alto
+	-- entre origem e destino.
+	local LONG_TRAVEL_EXTRA_HEIGHT =
+		120
+
+	-- Velocidade usada apenas para subir/descer
+	-- durante viagens longas.
+	local LONG_TRAVEL_VERTICAL_SPEED =
+		700
+
+	local SUBMERGED_DISTANCE_LIMIT =
+		10000
+
+	--==================================================
+	-- HELPERS
+	--==================================================
+
+	local function Log(text)
+		if
+			Debug
+			and
+			Debug.Log
+		then
+			Debug.Log(text)
+		else
+			print(
+				"[DEAL BLOX] "
+				..
+				tostring(text)
+			)
+		end
+	end
+
+	local function Warn(text)
+		if
+			Debug
+			and
+			Debug.Warn
+		then
+			Debug.Warn(text)
+		else
+			warn(
+				"[DEAL BLOX] "
+				..
+				tostring(text)
+			)
+		end
+	end
+
+	local function Warning(text)
+		State:SetWarning(
+			text,
+			5
+		)
+
+		pcall(function()
+			StarterGui:SetCore(
+				"SendNotification",
+				{
+					Title = "DEAL BLOX",
+					Text = tostring(text),
+					Duration = 5
+				}
+			)
+		end)
+	end
+
+	--==================================================
 	-- CHARACTER
 	--==================================================
 
 	local function GetCharacter()
-
 		local character =
 			Player.Character
 
@@ -77,7 +166,6 @@ function Farm.Create(
 			or
 			humanoid.Health <= 0
 		then
-
 			return nil
 		end
 
@@ -89,40 +177,36 @@ function Farm.Create(
 	--==================================================
 
 	local function GetLevel()
-
 		local Data =
 			Player:FindFirstChild(
 				"Data"
 			)
 
-		if not Data then
-			return 0
-		end
-
 		local Level =
+			Data
+			and
 			Data:FindFirstChild(
 				"Level"
 			)
 
-		if not Level then
-			return 0
-		end
-
-		return tonumber(
-			Level.Value
-		)
-		or
-		0
+		return
+			tonumber(
+				Level
+				and
+				Level.Value
+			)
+			or
+			1
 	end
 
 	--==================================================
-	-- REMOTE
+	-- REMOTES
 	--==================================================
 
-	local function GetRemote()
-
+	local function GetCommF()
 		local Remotes =
-			ReplicatedStorage:FindFirstChild(
+			ReplicatedStorage:
+			FindFirstChild(
 				"Remotes"
 			)
 
@@ -130,49 +214,48 @@ function Farm.Create(
 			return nil
 		end
 
-		return Remotes:FindFirstChild(
-			"CommF_"
-		)
+		return Remotes:
+			FindFirstChild(
+				"CommF_"
+			)
 	end
 
-	--==================================================
-	-- AVISO
-	--==================================================
-
-	local function Warning(
-		text
-	)
-
-		State:SetWarning(
-			text,
-			5
-		)
-
-		pcall(function()
-
-			StarterGui:SetCore(
-				"SendNotification",
-				{
-					Title =
-						"DEAL BLOX",
-
-					Text =
-						text,
-
-					Duration =
-						5
-				}
+	local function GetNet()
+		local Modules =
+			ReplicatedStorage:
+			FindFirstChild(
+				"Modules"
 			)
 
-		end)
+		if not Modules then
+			return nil
+		end
+
+		return Modules:
+			FindFirstChild(
+				"Net"
+			)
+	end
+
+	local function GetSubmarineRemote()
+		local Net =
+			GetNet()
+
+		if not Net then
+			return nil
+		end
+
+		return Net:
+			FindFirstChild(
+				"RF/SubmarineWorkerSpeak"
+			)
 	end
 
 	--==================================================
-	-- VALIDAR SEA
+	-- SEA
 	--==================================================
 
 	local function ValidateSea()
-
 		local level =
 			GetLevel()
 
@@ -195,7 +278,6 @@ function Farm.Create(
 		)
 
 		if currentSea == 0 then
-
 			State:SetRuntime(
 				"Status",
 				"Mapa não reconhecido"
@@ -213,7 +295,6 @@ function Farm.Create(
 			~=
 			requiredSea
 		then
-
 			State:SetRuntime(
 				"Status",
 				"Sea incorreto"
@@ -245,13 +326,9 @@ function Farm.Create(
 		nil
 
 	local function StopTween()
-
 		if CurrentTween then
-
 			pcall(function()
-
 				CurrentTween:Cancel()
-
 			end)
 		end
 
@@ -259,10 +336,10 @@ function Farm.Create(
 			nil
 	end
 
-	local function MoveTo(
-		targetCFrame
+	local function TweenTo(
+		targetCFrame,
+		speedOverride
 	)
-
 		if
 			not State.Settings.AutoFarm
 		then
@@ -284,9 +361,10 @@ function Farm.Create(
 			).Magnitude
 
 		if distance <= 10 then
-
-			root.CFrame =
-				targetCFrame
+			pcall(function()
+				root.CFrame =
+					targetCFrame
+			end)
 
 			return true
 		end
@@ -295,13 +373,15 @@ function Farm.Create(
 
 		local speed =
 			math.max(
+				speedOverride
+				or
 				State.Settings.TweenSpeed
-					or
-					350,
+				or
+				350,
 				100
 			)
 
-		local time =
+		local duration =
 			math.clamp(
 				distance / speed,
 				0.10,
@@ -311,12 +391,10 @@ function Farm.Create(
 		CurrentTween =
 			TweenService:Create(
 				root,
-
 				TweenInfo.new(
-					time,
+					duration,
 					Enum.EasingStyle.Linear
 				),
-
 				{
 					CFrame =
 						targetCFrame
@@ -337,11 +415,10 @@ function Farm.Create(
 				==
 				Enum.PlaybackState.Playing
 		do
-
 			if
 				tick() - started
 				>
-				time + 1
+				duration + 1
 			then
 				break
 			end
@@ -349,7 +426,386 @@ function Farm.Create(
 			task.wait(0.05)
 		end
 
+		return
+			State.Settings.AutoFarm
+	end
+
+	--==================================================
+	-- VIAGEM SEGURA ENTRE ILHAS
+	--==================================================
+
+	local function IsSubmergedPosition(
+		position
+	)
+		return
+			position.Y
+			<
+			-500
+	end
+
+	local function HorizontalDistance(
+		a,
+		b
+	)
+		return
+			(
+				Vector3.new(
+					a.X,
+					0,
+					a.Z
+				)
+				-
+				Vector3.new(
+					b.X,
+					0,
+					b.Z
+				)
+			).Magnitude
+	end
+
+	local function SafeLongTravel(
+		targetCFrame
+	)
+		if
+			not State.Settings.AutoFarm
+		then
+			return false
+		end
+
+		local _, _, root =
+			GetCharacter()
+
+		if not root then
+			return false
+		end
+
+		local origin =
+			root.Position
+
+		local target =
+			targetCFrame.Position
+
+		-- Dentro da Submerged não usamos o modo de
+		-- viagem alta. Subir demais lá pode fazer o
+		-- jogo devolver o jogador para Tiki.
+		if
+			IsSubmergedPosition(
+				origin
+			)
+			or
+			IsSubmergedPosition(
+				target
+			)
+		then
+			return TweenTo(
+				targetCFrame
+			)
+		end
+
+		local horizontal =
+			HorizontalDistance(
+				origin,
+				target
+			)
+
+		-- Se for perto, continua com o movimento normal.
+		if
+			horizontal
+			<
+			LONG_TRAVEL_DISTANCE
+		then
+			return TweenTo(
+				targetCFrame
+			)
+		end
+
+		-- Para trajetos entre ilhas:
+		-- 1. sobe;
+		-- 2. cruza o oceano no alto;
+		-- 3. desce somente em cima do destino.
+
+		local safeY =
+			math.max(
+				SAFE_OCEAN_HEIGHT,
+				origin.Y
+					+
+					LONG_TRAVEL_EXTRA_HEIGHT,
+				target.Y
+					+
+					LONG_TRAVEL_EXTRA_HEIGHT
+			)
+
+		State:SetRuntime(
+			"Status",
+			"Subindo para viagem"
+		)
+
+		local lift =
+			CFrame.new(
+				origin.X,
+				safeY,
+				origin.Z
+			)
+
+		if
+			math.abs(
+				root.Position.Y
+					-
+					safeY
+			)
+			>
+			15
+		then
+			if
+				not TweenTo(
+					lift,
+					LONG_TRAVEL_VERTICAL_SPEED
+				)
+			then
+				return false
+			end
+		end
+
+		if
+			not State.Settings.AutoFarm
+		then
+			return false
+		end
+
+		State:SetRuntime(
+			"Status",
+			"Viajando entre ilhas"
+		)
+
+		local across =
+			CFrame.new(
+				target.X,
+				safeY,
+				target.Z
+			)
+
+		if
+			not TweenTo(
+				across
+			)
+		then
+			return false
+		end
+
+		if
+			not State.Settings.AutoFarm
+		then
+			return false
+		end
+
+		State:SetRuntime(
+			"Status",
+			"Descendo no destino"
+		)
+
+		if
+			not TweenTo(
+				targetCFrame,
+				LONG_TRAVEL_VERTICAL_SPEED
+			)
+		then
+			return false
+		end
+
 		return true
+	end
+
+	local function MoveTo(
+		targetCFrame
+	)
+		return SafeLongTravel(
+			targetCFrame
+		)
+	end
+
+	local function MoveToTikiSubmarine()
+		if
+			not State.Settings.AutoFarm
+		then
+			return false
+		end
+
+		State:SetRuntime(
+			"Status",
+			"Indo para Tiki"
+		)
+
+		return SafeLongTravel(
+			TIKI_SUBMARINE
+				*
+				CFrame.new(
+					0,
+					4,
+					0
+				)
+		)
+	end
+
+	--==================================================
+	-- SUBMERGED ISLAND
+	--==================================================
+
+	local function IsInsideSubmerged(
+		QuestData
+	)
+		if
+			not QuestData
+			or
+			not QuestData.RequiresSubmerged
+		then
+			return false
+		end
+
+		local _, _, root =
+			GetCharacter()
+
+		if not root then
+			return false
+		end
+
+		-- A área fica muito abaixo do Sea 3 normal.
+		if root.Position.Y < -1000 then
+			return true
+		end
+
+		-- Segunda verificação por distância da quest.
+		local distance =
+			(
+				root.Position
+				-
+				QuestData.QuestPos.Position
+			).Magnitude
+
+		return
+			distance
+			<
+			SUBMERGED_DISTANCE_LIMIT
+	end
+
+	local function TravelToSubmerged(
+		QuestData
+	)
+		if IsInsideSubmerged(
+			QuestData
+		) then
+			return true
+		end
+
+		State:SetRuntime(
+			"Status",
+			"Entrando na Submerged"
+		)
+
+		if not MoveToTikiSubmarine() then
+			return false
+		end
+
+		if
+			not State.Settings.AutoFarm
+		then
+			return false
+		end
+
+		task.wait(1.5)
+
+		local Remote =
+			GetSubmarineRemote()
+
+		if not Remote then
+			State:SetRuntime(
+				"Status",
+				"Submarino não encontrado"
+			)
+
+			Warning(
+				"Não encontrei o Remote do submarino. Entre na Submerged Island manualmente e ligue o Auto Farm novamente."
+			)
+
+			return false
+		end
+
+		local success, result =
+			pcall(function()
+				return Remote:InvokeServer(
+					"TravelToSubmergedIsland"
+				)
+			end)
+
+		if not success then
+			Warn(
+				"Falha ao usar o submarino: "
+				..
+				tostring(result)
+			)
+
+			State:SetRuntime(
+				"Status",
+				"Falha no submarino"
+			)
+
+			Warning(
+				"Não consegui entrar na Submerged Island. Verifique se sua conta já liberou o acesso pelo Submarine Worker."
+			)
+
+			return false
+		end
+
+		State:SetRuntime(
+			"Status",
+			"Aguardando Submerged"
+		)
+
+		local started =
+			tick()
+
+		while
+			State.Settings.AutoFarm
+			and
+			tick() - started < 10
+		do
+			task.wait(0.25)
+
+			if IsInsideSubmerged(
+				QuestData
+			) then
+				Log(
+					"✅ Submerged Island detectada."
+				)
+
+				return true
+			end
+		end
+
+		Warning(
+			"O submarino foi acionado, mas a Submerged Island não foi detectada."
+		)
+
+		return false
+	end
+
+	local function EnsureQuestArea(
+		QuestData
+	)
+		if
+			not QuestData.RequiresSubmerged
+		then
+			return true
+		end
+
+		if IsInsideSubmerged(
+			QuestData
+		) then
+			return true
+		end
+
+		return TravelToSubmerged(
+			QuestData
+		)
 	end
 
 	--==================================================
@@ -357,7 +813,6 @@ function Farm.Create(
 	--==================================================
 
 	local function ActivateBuso()
-
 		if
 			not State.Settings.AutoBuso
 		then
@@ -372,7 +827,8 @@ function Farm.Create(
 		end
 
 		if
-			character:FindFirstChild(
+			character:
+			FindFirstChild(
 				"HasBuso"
 			)
 		then
@@ -380,26 +836,22 @@ function Farm.Create(
 		end
 
 		local Remote =
-			GetRemote()
+			GetCommF()
 
 		if Remote then
-
 			pcall(function()
-
 				Remote:InvokeServer(
 					"Buso"
 				)
-
 			end)
 		end
 	end
 
 	--==================================================
-	-- ARMAMENTO
+	-- EQUIPAR CATEGORIA
 	--==================================================
 
 	local function EquipAttack()
-
 		local character, humanoid =
 			GetCharacter()
 
@@ -412,18 +864,10 @@ function Farm.Create(
 		end
 
 		local WeaponMap = {
-
-			["Estilo de luta"] =
-				"Melee",
-
-			["Espada"] =
-				"Sword",
-
-			["Arma"] =
-				"Gun",
-
-			["Fruta"] =
-				"Blox Fruit"
+			["Estilo de luta"] = "Melee",
+			["Espada"] = "Sword",
+			["Arma"] = "Gun",
+			["Fruta"] = "Blox Fruit",
 		}
 
 		local selected =
@@ -436,12 +880,9 @@ function Farm.Create(
 			return nil
 		end
 
-		-- Já está equipado
-
 		for _, tool in ipairs(
 			character:GetChildren()
 		) do
-
 			if
 				tool:IsA("Tool")
 				and
@@ -449,12 +890,9 @@ function Farm.Create(
 					==
 				targetTooltip
 			then
-
 				return tool
 			end
 		end
-
-		-- Mochila
 
 		local Backpack =
 			Player:FindFirstChild(
@@ -468,7 +906,6 @@ function Farm.Create(
 		for _, tool in ipairs(
 			Backpack:GetChildren()
 		) do
-
 			if
 				tool:IsA("Tool")
 				and
@@ -476,13 +913,11 @@ function Farm.Create(
 					==
 				targetTooltip
 			then
-
 				pcall(function()
-
-					humanoid:EquipTool(
-						tool
-					)
-
+					humanoid:
+						EquipTool(
+							tool
+						)
 				end)
 
 				return tool
@@ -497,61 +932,40 @@ function Farm.Create(
 	--==================================================
 
 	local function Attack()
-
-		local character =
-			Player.Character
-
-		if not character then
-			return
-		end
-
-		local tool =
-			character:FindFirstChildOfClass(
-				"Tool"
-			)
-
-		if tool then
-
-			pcall(function()
-
-				tool:Activate()
-
-			end)
-		end
-
 		pcall(function()
+			VirtualUser:
+				CaptureController()
 
-			VirtualUser:CaptureController()
-
-			VirtualUser:Button1Down(
-				Vector2.new(
-					1280,
-					672
+			VirtualUser:
+				Button1Down(
+					Vector2.new(
+						1280,
+						672
+					)
 				)
-			)
 
 			task.wait(0.02)
 
-			VirtualUser:Button1Up(
-				Vector2.new(
-					1280,
-					672
+			VirtualUser:
+				Button1Up(
+					Vector2.new(
+						1280,
+						672
+					)
 				)
-			)
-
 		end)
 	end
 
 	--==================================================
-	-- QUEST CORRETA?
+	-- QUEST GUI
 	--==================================================
 
 	local function HasCorrectQuest(
 		QuestData
 	)
-
 		local PlayerGui =
-			Player:FindFirstChild(
+			Player:
+			FindFirstChild(
 				"PlayerGui"
 			)
 
@@ -560,7 +974,8 @@ function Farm.Create(
 		end
 
 		local Main =
-			PlayerGui:FindFirstChild(
+			PlayerGui:
+			FindFirstChild(
 				"Main"
 			)
 
@@ -569,7 +984,8 @@ function Farm.Create(
 		end
 
 		local Quest =
-			Main:FindFirstChild(
+			Main:
+			FindFirstChild(
 				"Quest"
 			)
 
@@ -583,43 +999,55 @@ function Farm.Create(
 
 		local success, title =
 			pcall(function()
-
 				return Quest
 					.Container
 					.QuestTitle
 					.Title
 					.Text
-
 			end)
 
-		if not success then
+		if
+			not success
+			or
+			not title
+		then
 			return false
 		end
 
-		return string.find(
-			string.lower(title),
-			string.lower(
-				QuestData.Mob
-			),
-			1,
-			true
-		)
-		~=
-		nil
+		return
+			string.find(
+				string.lower(
+					tostring(title)
+				),
+				string.lower(
+					QuestData.Mob
+				),
+				1,
+				true
+			)
+			~=
+			nil
 	end
 
 	--==================================================
-	-- PEGAR QUEST
+	-- START QUEST
 	--==================================================
 
 	local function StartQuest(
 		QuestData
 	)
-
 		if
 			not State.Settings.AutoFarm
 		then
-			return
+			return false
+		end
+
+		if
+			not EnsureQuestArea(
+				QuestData
+			)
+		then
+			return false
 		end
 
 		State:SetRuntime(
@@ -632,48 +1060,61 @@ function Farm.Create(
 			QuestData.Mob
 		)
 
-		MoveTo(
+		if not MoveTo(
 			QuestData.QuestPos
 				*
-			CFrame.new(
-				0,
-				4,
-				0
-			)
-		)
+				CFrame.new(
+					0,
+					4,
+					0
+				)
+		) then
+			return false
+		end
 
 		if
 			not State.Settings.AutoFarm
 		then
-			return
+			return false
 		end
 
 		task.wait(0.30)
 
 		local Remote =
-			GetRemote()
+			GetCommF()
 
 		if not Remote then
-
 			State:SetRuntime(
 				"Status",
 				"Remote não encontrado"
 			)
 
-			return
+			return false
 		end
 
-		pcall(function()
+		local success, result =
+			pcall(function()
+				return Remote:
+					InvokeServer(
+						"StartQuest",
+						QuestData.Quest,
+						QuestData.QuestNum
+					)
+			end)
 
-			Remote:InvokeServer(
-				"StartQuest",
-				QuestData.Quest,
-				QuestData.QuestNum
+		if not success then
+			Warn(
+				"Erro StartQuest: "
+				..
+				tostring(result)
 			)
 
-		end)
+			return false
+		end
 
 		task.wait(0.60)
+
+		return true
 	end
 
 	--==================================================
@@ -683,9 +1124,9 @@ function Farm.Create(
 	local function FindTarget(
 		QuestData
 	)
-
 		local Enemies =
-			workspace:FindFirstChild(
+			workspace:
+			FindFirstChild(
 				"Enemies"
 			)
 
@@ -696,23 +1137,29 @@ function Farm.Create(
 		local _, _, playerRoot =
 			GetCharacter()
 
-		local Closest =
+		local closest =
 			nil
 
-		local ClosestDistance =
+		local closestDistance =
 			math.huge
+
+		local wanted =
+			string.lower(
+				QuestData.Mob
+			)
 
 		for _, enemy in ipairs(
 			Enemies:GetChildren()
 		) do
-
 			local humanoid =
-				enemy:FindFirstChildOfClass(
+				enemy:
+				FindFirstChildOfClass(
 					"Humanoid"
 				)
 
 			local root =
-				enemy:FindFirstChild(
+				enemy:
+				FindFirstChild(
 					"HumanoidRootPart"
 				)
 
@@ -721,9 +1168,7 @@ function Farm.Create(
 					string.lower(
 						enemy.Name
 					),
-					string.lower(
-						QuestData.Mob
-					),
+					wanted,
 					1,
 					true
 				)
@@ -737,12 +1182,10 @@ function Farm.Create(
 				and
 				humanoid.Health > 0
 			then
-
 				local distance =
 					0
 
 				if playerRoot then
-
 					distance =
 						(
 							playerRoot.Position
@@ -754,37 +1197,37 @@ function Farm.Create(
 				if
 					distance
 					<
-					ClosestDistance
+					closestDistance
 				then
-
-					Closest =
+					closest =
 						enemy
 
-					ClosestDistance =
+					closestDistance =
 						distance
 				end
 			end
 		end
 
-		return Closest
+		return closest
 	end
 
 	--==================================================
-	-- LUTAR
+	-- FIGHT
 	--==================================================
 
 	local function Fight(
 		Target,
 		QuestData
 	)
-
 		local humanoid =
-			Target:FindFirstChildOfClass(
+			Target:
+			FindFirstChildOfClass(
 				"Humanoid"
 			)
 
 		local enemyRoot =
-			Target:FindFirstChild(
+			Target:
+			FindFirstChild(
 				"HumanoidRootPart"
 			)
 
@@ -807,7 +1250,6 @@ function Farm.Create(
 		)
 
 		ActivateBuso()
-
 		EquipAttack()
 
 		while
@@ -819,19 +1261,16 @@ function Farm.Create(
 			and
 			humanoid.Health > 0
 		do
-
 			local _, _, playerRoot =
 				GetCharacter()
 
 			if not playerRoot then
-
 				State:SetRuntime(
 					"Status",
 					"Aguardando respawn"
 				)
 
 				task.wait(1)
-
 				continue
 			end
 
@@ -847,6 +1286,16 @@ function Farm.Create(
 				or
 				24
 
+			-- Dentro da Submerged não sobe demais.
+			if QuestData.RequiresSubmerged then
+				height =
+					math.clamp(
+						height,
+						10,
+						30
+					)
+			end
+
 			local above =
 				enemyPosition
 				+
@@ -857,7 +1306,6 @@ function Farm.Create(
 				)
 
 			pcall(function()
-
 				playerRoot.AssemblyLinearVelocity =
 					Vector3.zero
 
@@ -869,13 +1317,10 @@ function Farm.Create(
 						above,
 						enemyPosition
 					)
-
 			end)
 
 			ActivateBuso()
-
 			EquipAttack()
-
 			Attack()
 
 			task.wait(
@@ -896,7 +1341,6 @@ function Farm.Create(
 	--==================================================
 
 	local function Step()
-
 		local level =
 			GetLevel()
 
@@ -923,7 +1367,6 @@ function Farm.Create(
 			~=
 			requiredSea
 		then
-
 			State:SetSetting(
 				"AutoFarm",
 				false
@@ -956,14 +1399,12 @@ function Farm.Create(
 			)
 
 		if not QuestData then
-
 			State:SetRuntime(
 				"Status",
 				"Quest não encontrada"
 			)
 
 			task.wait(1)
-
 			return
 		end
 
@@ -973,11 +1414,23 @@ function Farm.Create(
 		)
 
 		if
+			not EnsureQuestArea(
+				QuestData
+			)
+		then
+			State:SetSetting(
+				"AutoFarm",
+				false
+			)
+
+			return
+		end
+
+		if
 			not HasCorrectQuest(
 				QuestData
 			)
 		then
-
 			StartQuest(
 				QuestData
 			)
@@ -991,14 +1444,11 @@ function Farm.Create(
 			)
 
 		if Target then
-
 			Fight(
 				Target,
 				QuestData
 			)
-
 		else
-
 			State:SetRuntime(
 				"Status",
 				"Procurando NPC"
@@ -1012,13 +1462,19 @@ function Farm.Create(
 			MoveTo(
 				QuestData.MobPos
 					*
-				CFrame.new(
-					0,
-					State.Settings.FarmHeight
-						or
-						24,
-					0
-				)
+					CFrame.new(
+						0,
+						QuestData.RequiresSubmerged
+							and
+							18
+							or
+							(
+								State.Settings.FarmHeight
+								or
+								24
+							),
+						0
+					)
 			)
 
 			task.wait(0.7)
@@ -1034,14 +1490,11 @@ function Farm.Create(
 	function API:SetEnabled(
 		enabled
 	)
-
 		enabled =
 			enabled == true
 
 		if enabled then
-
 			if not ValidateSea() then
-
 				State:SetSetting(
 					"AutoFarm",
 					false
@@ -1084,17 +1537,14 @@ function Farm.Create(
 	end
 
 	function API:GetSea()
-
 		return Quests.GetSea()
 	end
 
 	function API:GetLevel()
-
 		return GetLevel()
 	end
 
 	function API:GetRequiredSea()
-
 		return Quests.GetRequiredSea(
 			GetLevel()
 		)
@@ -1104,12 +1554,11 @@ function Farm.Create(
 	-- NOCLIP
 	--==================================================
 
-	RunService.Stepped:Connect(
-		function()
-
+	RunService.Stepped:
+		Connect(function()
 			if
 				Environment.DealBloxFarmToken
-					~=
+				~=
 				Token
 			then
 				return
@@ -1128,41 +1577,33 @@ function Farm.Create(
 				return
 			end
 
-			for _, part in ipairs(
+			for _, object in ipairs(
 				character:GetDescendants()
 			) do
-
 				if
-					part:IsA(
+					object:IsA(
 						"BasePart"
 					)
 				then
-
-					part.CanCollide =
+					object.CanCollide =
 						false
 				end
 			end
-		end
-	)
+		end)
 
 	--==================================================
 	-- LOOP
 	--==================================================
 
 	task.spawn(function()
-
-		Debug.Log(
-			"Motor de Auto Farm iniciado."
-		)
-
 		while
 			Environment.DealBloxFarmToken
-				==
+			==
 			Token
 		do
-
-			if State.Settings.AutoFarm then
-
+			if
+				State.Settings.AutoFarm
+			then
 				local success, errorMessage =
 					xpcall(
 						Step,
@@ -1170,30 +1611,32 @@ function Farm.Create(
 					)
 
 				if not success then
+					Warn(
+						"Erro no Auto Farm:"
+					)
 
-					Debug.Warn(
-						"Erro no Auto Farm: "
-						..
-						tostring(
-							errorMessage
-						)
+					Warn(
+						errorMessage
 					)
 
 					State:SetRuntime(
 						"Status",
-						"Erro - tentando novamente"
+						"Erro no Auto Farm"
 					)
 
 					task.wait(1)
 				end
 			else
-
-				task.wait(0.25)
+				task.wait(0.15)
 			end
 
 			task.wait(0.05)
 		end
 	end)
+
+	Log(
+		"Farm Engine carregado."
+	)
 
 	return API
 end
