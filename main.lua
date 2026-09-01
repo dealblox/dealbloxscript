@@ -10,15 +10,11 @@ until game:IsLoaded()
 local Players =
 	game:GetService("Players")
 
-local ReplicatedStorage =
-	game:GetService("ReplicatedStorage")
-
 local Player =
 	Players.LocalPlayer
 
 while not Player do
 	task.wait()
-
 	Player =
 		Players.LocalPlayer
 end
@@ -44,7 +40,6 @@ Environment.DealBloxLoaded =
 --==================================================
 
 local function Log(text)
-
 	print(
 		"[DEAL BLOX / MAIN] "
 		..
@@ -53,12 +48,33 @@ local function Log(text)
 end
 
 local function Warn(text)
-
 	warn(
 		"[DEAL BLOX / MAIN] "
 		..
 		tostring(text)
 	)
+end
+
+--==================================================
+-- CACHE BUSTER
+--==================================================
+
+local function CacheKey()
+	return
+		tostring(
+			math.floor(
+				tick() * 1000
+			)
+		)
+		..
+		"-"
+		..
+		tostring(
+			math.random(
+				100000,
+				999999
+			)
+		)
 end
 
 --==================================================
@@ -68,37 +84,29 @@ end
 local LoadedModules = {}
 
 local function LoadModule(path)
-
 	Log(
 		"Carregando "
 		..
 		path
 	)
 
-	-- Evita carregar versão antiga em cache
-	local cacheBuster =
+	local url =
+		BASE_URL
+		..
+		path
+		..
 		"?dealblox="
 		..
-		tostring(
-			math.floor(
-				tick() * 1000
-			)
-		)
+		CacheKey()
 
 	local downloadSuccess, source =
 		pcall(function()
-
 			return game:HttpGet(
-				BASE_URL
-				..
-				path
-				..
-				cacheBuster
+				url
 			)
 		end)
 
 	if not downloadSuccess then
-
 		error(
 			"Falha ao baixar "
 			..
@@ -115,7 +123,6 @@ local function LoadModule(path)
 		or
 		source == ""
 	then
-
 		error(
 			"Arquivo vazio: "
 			..
@@ -124,10 +131,11 @@ local function LoadModule(path)
 	end
 
 	local compiled, compileError =
-		loadstring(source)
+		loadstring(
+			source
+		)
 
 	if not compiled then
-
 		error(
 			"Erro de compilação em "
 			..
@@ -135,7 +143,9 @@ local function LoadModule(path)
 			..
 			"\n"
 			..
-			tostring(compileError)
+			tostring(
+				compileError
+			)
 		)
 	end
 
@@ -146,7 +156,6 @@ local function LoadModule(path)
 		)
 
 	if not success then
-
 		error(
 			"Erro executando "
 			..
@@ -170,302 +179,222 @@ local function LoadModule(path)
 	return result
 end
 
---==================================================
--- DETECTOR DE SEA
---==================================================
-
-local function ConfigureSeaDetector(
-	Quests,
-	Debug
-)
-
-	local KnownPlaceIds = {
-
-		-- SEA 1
-		[2753915549] = 1,
-
-		-- SEA 2
-		[4442272183] = 2,
-
-		-- SEA 3
-		[7449423635] = 3
-	}
-
-	--==================================================
-	-- NOMES ÚNICOS DOS MAPAS
-	--==================================================
-
-	local SeaLocations = {
-
-		[1] = {
-
-			"Middle Town",
-			"Jungle",
-			"Pirate Village",
-			"Desert",
-			"Frozen Village",
-			"Marine Fortress",
-			"Skylands",
-			"Prison",
-			"Magma Village",
-			"Underwater City",
-			"Fountain City"
-		},
-
-		[2] = {
-
-			"Kingdom of Rose",
-			"Green Zone",
-			"Graveyard",
-			"Snow Mountain",
-			"Hot and Cold",
-			"Cursed Ship",
-			"Ice Castle",
-			"Forgotten Island"
-		},
-
-		[3] = {
-
-			"Port Town",
-			"Hydra Island",
-			"Great Tree",
-			"Floating Turtle",
-			"Castle on the Sea",
-			"Haunted Castle",
-			"Sea of Treats",
-			"Tiki Outpost"
-		}
-	}
-
-	local CachedSea =
-		nil
-
-	--==================================================
-	-- NORMALIZAR
-	--==================================================
-
-	local function Normalize(text)
-
-		text =
-			string.lower(
-				tostring(text or "")
-			)
-
-		text =
-			string.gsub(
-				text,
-				"[%s%p_]+",
-				""
-			)
-
-		return text
-	end
-
-	--==================================================
-	-- BUSCAR LOCAL
-	--==================================================
-
-	local function HasLocation(
-		container,
-		locationName
-	)
-
-		if not container then
-			return false
-		end
-
-		local target =
-			Normalize(
-				locationName
-			)
-
-		for _, object in ipairs(
-			container:GetChildren()
-		) do
-
-			if
-				Normalize(object.Name)
-				==
-				target
-			then
-
-				return true
-			end
-		end
-
-		return false
-	end
-
-	--==================================================
-	-- DETECTAR PELO MAPA
-	--==================================================
-
-	local function DetectFromWorld()
-
-		local WorldOrigin =
-			workspace:FindFirstChild(
-				"_WorldOrigin"
-			)
-
-		if not WorldOrigin then
-			return 0
-		end
-
-		local Locations =
-			WorldOrigin:FindFirstChild(
-				"Locations"
-			)
-
-		if not Locations then
-			return 0
-		end
-
-		local BestSea =
-			0
-
-		local BestScore =
-			0
-
-		for sea, locationList in pairs(
-			SeaLocations
-		) do
-
-			local Score =
-				0
-
-			for _, locationName in ipairs(
-				locationList
-			) do
-
-				if
-					HasLocation(
-						Locations,
-						locationName
-					)
-				then
-
-					Score =
-						Score + 1
-				end
-			end
-
-			if Score > BestScore then
-
-				BestScore =
-					Score
-
-				BestSea =
-					sea
-			end
-		end
-
-		if BestScore > 0 then
-
-			return BestSea
-		end
-
-		return 0
-	end
-
-	--==================================================
-	-- DETECTOR PRINCIPAL
-	--==================================================
-
-	local function DetectSea()
-
-		-- Já detectado
-		if CachedSea then
-			return CachedSea
-		end
-
-		-- Método 1:
-		-- PlaceId conhecido
-
-		local ByPlaceId =
-			KnownPlaceIds[
-				game.PlaceId
-			]
-
-		if ByPlaceId then
-
-			CachedSea =
-				ByPlaceId
-
-			return CachedSea
-		end
-
-		-- Método 2:
-		-- Estrutura do mapa
-
-		local ByMap =
-			DetectFromWorld()
-
-		if ByMap > 0 then
-
-			CachedSea =
-				ByMap
-
-			return CachedSea
-		end
-
-		-- Não armazenamos 0 em cache.
-		-- Assim o script continua tentando
-		-- enquanto o mapa termina de carregar.
-
-		return 0
-	end
-
-	--==================================================
-	-- SUBSTITUIR FUNÇÃO
-	--==================================================
-
-	Quests.GetSea =
-		DetectSea
-
-	--==================================================
-	-- DEBUG
-	--==================================================
-
-	task.spawn(function()
-
-		task.wait(1)
-
-		local sea =
-			DetectSea()
-
-		print(
-			"[DEAL BLOX / SEA] PlaceId="
-			..
-			tostring(game.PlaceId)
-			..
-			" | GameId="
-			..
-			tostring(game.GameId)
-			..
-			" | Sea="
-			..
-			tostring(sea)
+local function TryLoadModule(path)
+	local success, result =
+		xpcall(
+			function()
+				return LoadModule(
+					path
+				)
+			end,
+			debug.traceback
 		)
 
-		if sea > 0 then
+	if success then
+		return result, nil
+	end
 
-			Debug.Log(
-				"✅ Sea detectado: SEA "
-				..
-				tostring(sea)
-			)
+	Warn(result)
 
-		else
+	return nil, result
+end
 
-			Debug.Warn(
-				"⚠️ Sea não detectado. PlaceId: "
-				..
-				tostring(game.PlaceId)
-			)
-		end
-	end)
+--==================================================
+-- ERRO VISUAL EM UMA ABA
+--==================================================
 
-	return DetectSea
+local function ShowPageError(
+	App,
+	pageName,
+	title,
+	message
+)
+	if
+		not App
+		or
+		not App.GetPage
+	then
+		return
+	end
+
+	local Page =
+		App:GetPage(
+			pageName
+		)
+
+	if not Page then
+		return
+	end
+
+	for _, object in ipairs(
+		Page:GetChildren()
+	) do
+		object:Destroy()
+	end
+
+	local Holder =
+		Instance.new(
+			"Frame"
+		)
+
+	Holder.Parent =
+		Page
+
+	Holder.AnchorPoint =
+		Vector2.new(
+			0.5,
+			0.5
+		)
+
+	Holder.Position =
+		UDim2.fromScale(
+			0.5,
+			0.5
+		)
+
+	Holder.Size =
+		UDim2.new(
+			1,
+			-30,
+			0,
+			220
+		)
+
+	Holder.BackgroundColor3 =
+		Color3.fromRGB(
+			22,
+			27,
+			38
+		)
+
+	Holder.BorderSizePixel =
+		0
+
+	local Corner =
+		Instance.new(
+			"UICorner"
+		)
+
+	Corner.CornerRadius =
+		UDim.new(
+			0,
+			12
+		)
+
+	Corner.Parent =
+		Holder
+
+	local Stroke =
+		Instance.new(
+			"UIStroke"
+		)
+
+	Stroke.Color =
+		Color3.fromRGB(
+			255,
+			70,
+			90
+		)
+
+	Stroke.Thickness =
+		1.5
+
+	Stroke.Parent =
+		Holder
+
+	local Title =
+		Instance.new(
+			"TextLabel"
+		)
+
+	Title.Parent =
+		Holder
+
+	Title.Position =
+		UDim2.fromOffset(
+			16,
+			14
+		)
+
+	Title.Size =
+		UDim2.new(
+			1,
+			-32,
+			0,
+			32
+		)
+
+	Title.BackgroundTransparency =
+		1
+
+	Title.Text =
+		title
+
+	Title.TextColor3 =
+		Color3.fromRGB(
+			255,
+			255,
+			255
+		)
+
+	Title.Font =
+		Enum.Font.GothamBold
+
+	Title.TextSize =
+		16
+
+	Title.TextXAlignment =
+		Enum.TextXAlignment.Left
+
+	local Message =
+		Instance.new(
+			"TextLabel"
+		)
+
+	Message.Parent =
+		Holder
+
+	Message.Position =
+		UDim2.fromOffset(
+			16,
+			55
+		)
+
+	Message.Size =
+		UDim2.new(
+			1,
+			-32,
+			1,
+			-70
+		)
+
+	Message.BackgroundTransparency =
+		1
+
+	Message.Text =
+		tostring(message)
+
+	Message.TextColor3 =
+		Color3.fromRGB(
+			210,
+			215,
+			225
+		)
+
+	Message.Font =
+		Enum.Font.Gotham
+
+	Message.TextSize =
+		12
+
+	Message.TextWrapped =
+		true
+
+	Message.TextXAlignment =
+		Enum.TextXAlignment.Left
+
+	Message.TextYAlignment =
+		Enum.TextYAlignment.Top
 end
 
 --==================================================
@@ -474,9 +403,7 @@ end
 
 local success, errorMessage =
 	xpcall(
-
 		function()
-
 			Log(
 				"============================="
 			)
@@ -514,17 +441,7 @@ local success, errorMessage =
 				)
 
 			--==================================================
-			-- SEA DETECTOR
-			--==================================================
-
-			local DetectSea =
-				ConfigureSeaDetector(
-					Quests,
-					Debug
-				)
-
-			--==================================================
-			-- COMPONENTES
+			-- UI COMPONENTS
 			--==================================================
 
 			local Components =
@@ -549,114 +466,215 @@ local success, errorMessage =
 				)
 
 			if not App then
-
 				error(
 					"Interface.Create não retornou App."
 				)
-			end
-
-			-- Atualiza o SEA do topo
-			-- imediatamente.
-
-			if App.SeaBadge then
-
-				local sea =
-					DetectSea()
-
-				if sea > 0 then
-
-					App.SeaBadge.Text =
-						"SEA "
-						..
-						tostring(sea)
-
-				else
-
-					App.SeaBadge.Text =
-						"SEA ?"
-				end
 			end
 
 			--==================================================
 			-- PRINCIPAL
 			--==================================================
 
-			local Principal =
-				LoadModule(
+			local Principal,
+				principalError =
+				TryLoadModule(
 					"ui/principal.lua"
 				)
 
-			Principal.Create(
-				App,
-				Config,
-				Components,
-				Debug
-			)
+			if Principal then
+				local principalSuccess,
+					principalCreateError =
+					xpcall(
+						function()
+							Principal.Create(
+								App,
+								Config,
+								Components,
+								Debug
+							)
+						end,
+						debug.traceback
+					)
+
+				if not principalSuccess then
+					Warn(
+						principalCreateError
+					)
+				end
+			else
+				Warn(
+					principalError
+				)
+			end
 
 			--==================================================
 			-- FARM ENGINE
 			--==================================================
 
-			local FarmModule =
-				LoadModule(
+			local FarmModule,
+				farmModuleError =
+				TryLoadModule(
 					"modules/farm.lua"
 				)
 
 			local FarmEngine =
-				FarmModule.Create(
-					State,
-					Quests,
-					Debug
-				)
+				nil
 
-			if not FarmEngine then
+			if FarmModule then
+				local farmCreateSuccess,
+					farmResult =
+					xpcall(
+						function()
+							return FarmModule.Create(
+								State,
+								Quests,
+								Debug
+							)
+						end,
+						debug.traceback
+					)
 
-				error(
-					"FarmModule.Create não retornou FarmEngine."
-				)
+				if farmCreateSuccess then
+					FarmEngine =
+						farmResult
+				else
+					farmModuleError =
+						farmResult
+
+					Warn(
+						farmResult
+					)
+				end
 			end
 
 			--==================================================
 			-- CONFIG FARM
 			--==================================================
 
-			local FarmConfig =
-				LoadModule(
+			local FarmConfig,
+				farmConfigError =
+				TryLoadModule(
 					"ui/farmconfig.lua"
 				)
 
-			FarmConfig.Create(
-				App,
-				Config,
-				Components,
-				Debug,
-				State
-			)
+			if FarmConfig then
+				local configSuccess,
+					configCreateError =
+					xpcall(
+						function()
+							FarmConfig.Create(
+								App,
+								Config,
+								Components,
+								Debug,
+								State
+							)
+						end,
+						debug.traceback
+					)
+
+				if not configSuccess then
+					farmConfigError =
+						configCreateError
+
+					Warn(
+						configCreateError
+					)
+				end
+			end
 
 			--==================================================
 			-- FARM UI
 			--==================================================
 
-			local FarmUI =
-				LoadModule(
-					"ui/farm.lua"
+			if not FarmEngine then
+				ShowPageError(
+					App,
+					"Farm",
+					"❌ AUTO FARM NÃO CARREGOU",
+					farmModuleError
+						or
+						"FarmEngine não foi criado."
 				)
+			else
+				local FarmUI,
+					farmUIError =
+					TryLoadModule(
+						"ui/farm.lua"
+					)
 
-			FarmUI.Create(
-				App,
-				Config,
-				Components,
-				Debug,
-				State,
-				FarmEngine
-			)
+				if FarmUI then
+					local uiSuccess,
+						uiCreateError =
+						xpcall(
+							function()
+								FarmUI.Create(
+									App,
+									Config,
+									Components,
+									Debug,
+									State,
+									FarmEngine
+								)
+							end,
+							debug.traceback
+						)
+
+					if not uiSuccess then
+						farmUIError =
+							uiCreateError
+
+						Warn(
+							uiCreateError
+						)
+					end
+				end
+
+				if
+					not FarmUI
+					or
+					farmUIError
+				then
+					ShowPageError(
+						App,
+						"Farm",
+						"❌ ERRO NA ABA FARM",
+						farmUIError
+							or
+							"ui/farm.lua não retornou um módulo válido."
+					)
+				end
+			end
+
+			--==================================================
+			-- SEA TOPBAR
+			--==================================================
+
+			if
+				App.SeaBadge
+				and
+				Quests.GetSea
+			then
+				local sea =
+					Quests.GetSea()
+
+				App.SeaBadge.Text =
+					sea > 0
+						and
+						(
+							"SEA "
+							..
+							tostring(sea)
+						)
+						or
+						"SEA ?"
+			end
 
 			--==================================================
 			-- GLOBAL
 			--==================================================
 
 			Environment.DealBlox = {
-
 				Config =
 					Config,
 
@@ -693,32 +711,28 @@ local success, errorMessage =
 				"✅ DEAL BLOX CARREGADO"
 			)
 
-			Debug.Log(
-				"Farm e Configurações disponíveis."
-			)
-
-			Debug.Log(
-				"SEA atual: "
-				..
-				tostring(
-					DetectSea()
+			if FarmEngine then
+				Debug.Log(
+					"✅ Farm Engine disponível."
 				)
-			)
+			else
+				Debug.Warn(
+					"❌ Farm Engine indisponível."
+				)
+			end
 
 			Debug.Log(
 				"============================="
 			)
 		end,
-
 		debug.traceback
 	)
 
 --==================================================
--- ERRO
+-- ERRO GERAL
 --==================================================
 
 if not success then
-
 	Environment.DealBloxLoading =
 		false
 
