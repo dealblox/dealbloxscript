@@ -647,6 +647,88 @@ local success, errorMessage =
 			end
 
 			--==================================================
+			-- ESP ENGINE
+			--==================================================
+
+			local ESPModule,
+				espModuleError =
+				TryLoadModule(
+					"modules/esp.lua"
+				)
+
+			local ESPEngine =
+				nil
+
+			if ESPModule then
+				local espCreateSuccess,
+					espResult =
+					xpcall(
+						function()
+							return ESPModule.Create(
+								Debug
+							)
+						end,
+						debug.traceback
+					)
+
+				if espCreateSuccess then
+					ESPEngine =
+						espResult
+				else
+					espModuleError =
+						espResult
+
+					Warn(
+						espResult
+					)
+				end
+			end
+
+			--==================================================
+			-- ESP UI
+			--==================================================
+
+			if ESPEngine then
+				local ESPUI,
+					espUIError =
+					TryLoadModule(
+						"ui/esp.lua"
+					)
+
+				if ESPUI then
+					local espUISuccess,
+						espUICreateError =
+						xpcall(
+							function()
+								ESPUI.Create(
+									App,
+									Config,
+									Debug,
+									ESPEngine
+								)
+							end,
+							debug.traceback
+						)
+
+					if not espUISuccess then
+						Warn(
+							espUICreateError
+						)
+					end
+				else
+					Warn(
+						espUIError
+					)
+				end
+			else
+				Warn(
+					espModuleError
+						or
+						"ESP Engine não carregou."
+				)
+			end
+
+			--==================================================
 			-- SEA TOPBAR
 			--==================================================
 
@@ -692,6 +774,9 @@ local success, errorMessage =
 
 				Farm =
 					FarmEngine,
+
+				ESP =
+					ESPEngine,
 
 				Modules =
 					LoadedModules
