@@ -1026,26 +1026,14 @@ function Farm.Create(
 
 		State:SetRuntime(
 			"Status",
-			"Indo para Tiki"
+			"Indo para Sub Port 01"
 		)
 
 		--==================================================
-		-- 1. CHEGAR NA REGIÃO DA TIKI SEM DESCER NA ÁGUA
+		-- 1. IR PARA O X/Z DO SUB PORT, NÃO PARA A TORRE
 		--==================================================
 
-		local tiki =
-			FindTikiLocation()
-
-		local tikiCFrame =
-			GetObjectCFrame(
-				tiki
-			)
-
 		local referencePosition =
-			tikiCFrame
-			and
-			tikiCFrame.Position
-			or
 			TIKI_SUBMARINE_CFRAME.Position
 
 		local highY =
@@ -1053,10 +1041,7 @@ function Farm.Create(
 				SAFE_OCEAN_HEIGHT,
 				root.Position.Y
 					+
-					LONG_TRAVEL_EXTRA_HEIGHT,
-				referencePosition.Y
-					+
-					TIKI_APPROACH_HEIGHT
+					LONG_TRAVEL_EXTRA_HEIGHT
 			)
 
 		local highTarget =
@@ -1081,7 +1066,42 @@ function Farm.Create(
 		end
 
 		--==================================================
-		-- 2. ESPERAR O SUBMARINE WORKER CARREGAR
+		-- 2. DESCER SÓ ATÉ UMA ALTURA SEGURA PARA CARREGAR
+		--    O SUB PORT. NÃO DESCEMOS ATÉ A ÁGUA.
+		--==================================================
+
+		State:SetRuntime(
+			"Status",
+			"Carregando Sub Port 01"
+		)
+
+		local loadCFrame =
+			CFrame.new(
+				referencePosition.X,
+				math.max(
+					referencePosition.Y + 95,
+					120
+				),
+				referencePosition.Z
+			)
+
+		if
+			not TweenTo(
+				loadCFrame,
+				LONG_TRAVEL_VERTICAL_SPEED
+			)
+		then
+			return nil, nil
+		end
+
+		StopTween()
+
+		task.wait(
+			1.5
+		)
+
+		--==================================================
+		-- 3. PROCURAR O SUBMARINE WORKER DE VERDADE
 		--==================================================
 
 		State:SetRuntime(
@@ -1093,20 +1113,58 @@ function Farm.Create(
 			workerPart =
 				WaitForSubmarineWorker()
 
+		-- Segunda tentativa um pouco mais baixa,
+		-- ainda bem acima da água.
 		if
 			not worker
 			or
 			not workerPart
 		then
+			local secondLoad =
+				CFrame.new(
+					referencePosition.X,
+					math.max(
+						referencePosition.Y + 60,
+						85
+					),
+					referencePosition.Z
+				)
+
+			TweenTo(
+				secondLoad,
+				LONG_TRAVEL_VERTICAL_SPEED
+			)
+
+			StopTween()
+
+			task.wait(
+				1.5
+			)
+
+			worker,
+				workerPart =
+					WaitForSubmarineWorker()
+		end
+
+		if
+			not worker
+			or
+			not workerPart
+		then
+			State:SetRuntime(
+				"Status",
+				"Submarine Worker não encontrado"
+			)
+
 			Warning(
-				"Cheguei à Tiki, mas não encontrei o Submarine Worker."
+				"Cheguei ao Sub Port 01, mas não encontrei o Submarine Worker."
 			)
 
 			return nil, nil
 		end
 
 		--==================================================
-		-- 3. IR PARA CIMA DO NPC, NÃO PARA A ÁGUA
+		-- 4. IR SOMENTE ATÉ O NPC ENCONTRADO
 		--==================================================
 
 		State:SetRuntime(
@@ -1153,7 +1211,6 @@ function Farm.Create(
 			finalRoot.AssemblyAngularVelocity =
 				Vector3.zero
 
-			-- Garante que terminamos exatamente acima do NPC.
 			finalRoot.CFrame =
 				safeWorkerCFrame
 		end)
@@ -1181,6 +1238,11 @@ function Farm.Create(
 		)
 
 		if distance > 20 then
+			State:SetRuntime(
+				"Status",
+				"Falha ao chegar no Worker"
+			)
+
 			Warning(
 				"O Deal Blox encontrou o Submarine Worker, mas não conseguiu ficar perto dele."
 			)
@@ -1658,29 +1720,91 @@ function Farm.Create(
 	-- AUTO CLICK
 	--==================================================
 
-	local function Attack()
+	local function Attack(
+		Target
+	)
+		local character, humanoid,
+			playerRoot =
+				GetCharacter()
+
+		if
+			not character
+			or
+			not humanoid
+			or
+			not playerRoot
+		then
+			return false
+		end
+
+		local tool =
+			EquipAttack()
+
+		if not tool then
+			State:SetRuntime(
+				"Status",
+				"Armamento não encontrado"
+			)
+
+			return false
+		end
+
+		local enemyRoot =
+			Target
+			and
+			Target:
+				FindFirstChild(
+					"HumanoidRootPart"
+				)
+
+		-- Primeiro tenta a ativação normal da Tool.
+		local activated =
+			pcall(function()
+				tool:Activate()
+			end)
+
+		-- Algumas Tools atuais usam um remote próprio
+		-- para o clique esquerdo.
+		if
+			enemyRoot
+			and
+			tool:
+				FindFirstChild(
+					"LeftClickRemote"
+				)
+		then
+			pcall(function()
+				local direction =
+					(
+						enemyRoot.Position
+						-
+						playerRoot.Position
+					).Unit
+
+				tool.LeftClickRemote:
+					FireServer(
+						direction,
+						1
+					)
+			end)
+		end
+
+		-- Fallback para executores em que Tool:Activate()
+		-- sozinho não dispara o M1 do Blox Fruits.
 		pcall(function()
 			VirtualUser:
 				CaptureController()
 
 			VirtualUser:
-				Button1Down(
+				ClickButton1(
 					Vector2.new(
-						1280,
-						672
-					)
-				)
-
-			task.wait(0.02)
-
-			VirtualUser:
-				Button1Up(
-					Vector2.new(
-						1280,
-						672
+						0,
+						0
 					)
 				)
 		end)
+
+		return activated
 	end
 
 	--==================================================
@@ -2008,18 +2132,55 @@ function Farm.Create(
 			local enemyPosition =
 				enemyRoot.Position
 
-			local height =
-				State.Settings.FarmHeight
+			local configuredHeight =
+				tonumber(
+					State.Settings.FarmHeight
+				)
 				or
-				24
+				8
 
-			-- Dentro da Submerged não sobe demais.
+			local attackType =
+				State.Settings.AttackType
+				or
+				"Estilo de luta"
+
+			local height =
+				configuredHeight
+
+			-- O antigo padrão de 24 studs deixava o
+			-- personagem fora do alcance do M1.
+			if
+				attackType
+					==
+					"Estilo de luta"
+				or
+				attackType
+					==
+					"Espada"
+			then
+				height =
+					math.clamp(
+						configuredHeight,
+						5,
+						8
+					)
+			else
+				height =
+					math.clamp(
+						configuredHeight,
+						5,
+						12
+					)
+			end
+
+			-- Na Submerged continuamos baixos para
+			-- evitar sair da área e manter alcance.
 			if QuestData.RequiresSubmerged then
 				height =
 					math.clamp(
 						height,
-						10,
-						30
+						5,
+						9
 					)
 			end
 
@@ -2048,7 +2209,9 @@ function Farm.Create(
 
 			ActivateBuso()
 			EquipAttack()
-			Attack()
+			Attack(
+				Target
+			)
 
 			task.wait(
 				State.Settings.AttackDelay
@@ -2193,12 +2356,16 @@ function Farm.Create(
 						0,
 						QuestData.RequiresSubmerged
 							and
-							18
+							8
 							or
-							(
-								State.Settings.FarmHeight
+							math.clamp(
+								tonumber(
+									State.Settings.FarmHeight
+								)
 								or
-								24
+								8,
+								5,
+								12
 							),
 						0
 					)
