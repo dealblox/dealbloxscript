@@ -79,6 +79,20 @@ function Farm.Create(
 	local TIKI_APPROACH_HEIGHT =
 		180
 
+	-- Tempo máximo esperando o NPC carregar depois
+	-- que chegamos na região da Tiki.
+	local WORKER_SEARCH_TIME =
+		10
+
+	-- Distância que ficamos acima do Submarine Worker
+	-- para interagir sem cair na água.
+	local WORKER_SAFE_OFFSET =
+		6
+
+	-- Tempo máximo para confirmar a entrada na Submerged.
+	local SUBMERGED_TRAVEL_TIMEOUT =
+		10
+
 	local SAFE_OCEAN_HEIGHT =
 		450
 
@@ -795,11 +809,219 @@ function Farm.Create(
 		return nil, nil
 	end
 
+
+	local function GetObjectCFrame(
+		object
+	)
+		if not object then
+			return nil
+		end
+
+		if object:IsA(
+			"BasePart"
+		) then
+			return object.CFrame
+		end
+
+		if object:IsA(
+			"Attachment"
+		) then
+			return object.WorldCFrame
+		end
+
+		if object:IsA(
+			"Model"
+		) then
+			local success,
+				result =
+				pcall(function()
+					return object:GetPivot()
+				end)
+
+			if success then
+				return result
+			end
+		end
+
+		local part =
+			object:
+			FindFirstChildWhichIsA(
+				"BasePart",
+				true
+			)
+
+		return
+			part
+			and
+			part.CFrame
+			or
+			nil
+	end
+
+	local function FindSubmarinePrompt(
+		worker,
+		workerPart
+	)
+		-- Primeiro procura um prompt dentro do próprio NPC.
+		if worker then
+			for _, object in ipairs(
+				worker:GetDescendants()
+			) do
+				if object:IsA(
+					"ProximityPrompt"
+				) then
+					return object
+				end
+			end
+		end
+
+		-- Alguns NPCs deixam o prompt em uma peça/attachment
+		-- próximo ao modelo, então fazemos uma busca curta.
+		if not workerPart then
+			return nil
+		end
+
+		local bestPrompt =
+			nil
+
+		local bestDistance =
+			math.huge
+
+		for _, object in ipairs(
+			workspace:GetDescendants()
+		) do
+			if object:IsA(
+				"ProximityPrompt"
+			) then
+				local parent =
+					object.Parent
+
+				local position =
+					nil
+
+				if parent then
+					if parent:IsA(
+						"Attachment"
+					) then
+						position =
+							parent.WorldPosition
+					elseif parent:IsA(
+						"BasePart"
+					) then
+						position =
+							parent.Position
+					end
+				end
+
+				if position then
+					local distance =
+						(
+							position
+							-
+							workerPart.Position
+						).Magnitude
+
+					if
+						distance < 30
+						and
+						distance < bestDistance
+					then
+						bestPrompt =
+							object
+
+						bestDistance =
+							distance
+					end
+				end
+			end
+		end
+
+		return bestPrompt
+	end
+
+	local function TriggerSubmarinePrompt(
+		prompt
+	)
+		if not prompt then
+			return false
+		end
+
+		State:SetRuntime(
+			"Status",
+			"Conversando com Submarine Worker"
+		)
+
+		-- Executores como Delta/Xeno normalmente expõem
+		-- fireproximityprompt. Se não existir, tentamos
+		-- os métodos normais do ProximityPrompt.
+		local fired =
+			false
+
+		if
+			type(
+				fireproximityprompt
+			)
+			==
+			"function"
+		then
+			local success =
+				pcall(function()
+					fireproximityprompt(
+						prompt
+					)
+				end)
+
+			if success then
+				fired =
+					true
+			end
+		end
+
+		if not fired then
+			local success =
+				pcall(function()
+					prompt:
+						InputHoldBegin()
+
+					task.wait(
+						math.clamp(
+							tonumber(
+								prompt.HoldDuration
+							)
+							or
+							0,
+							0,
+							1.5
+						)
+						+
+						0.12
+					)
+
+					prompt:
+						InputHoldEnd()
+				end)
+
+			if success then
+				fired =
+					true
+			end
+		end
+
+		return fired
+	end
+
 	local function MoveToTikiSubmarine()
 		if
 			not State.Settings.AutoFarm
 		then
-			return false
+			return nil, nil
+		end
+
+		local _, _, root =
+			GetCharacter()
+
+		if not root then
+			return nil, nil
 		end
 
 		State:SetRuntime(
@@ -807,18 +1029,23 @@ function Farm.Create(
 			"Indo para Tiki"
 		)
 
-		local _, _, root =
-			GetCharacter()
-
-		if not root then
-			return false
-		end
-
 		--==================================================
-		-- 1. CRUZAR O OCEANO NO ALTO
+		-- 1. CHEGAR NA REGIÃO DA TIKI SEM DESCER NA ÁGUA
 		--==================================================
 
-		local targetPosition =
+		local tiki =
+			FindTikiLocation()
+
+		local tikiCFrame =
+			GetObjectCFrame(
+				tiki
+			)
+
+		local referencePosition =
+			tikiCFrame
+			and
+			tikiCFrame.Position
+			or
 			TIKI_SUBMARINE_CFRAME.Position
 
 		local highY =
@@ -827,16 +1054,16 @@ function Farm.Create(
 				root.Position.Y
 					+
 					LONG_TRAVEL_EXTRA_HEIGHT,
-				targetPosition.Y
+				referencePosition.Y
 					+
 					TIKI_APPROACH_HEIGHT
 			)
 
 		local highTarget =
 			CFrame.new(
-				targetPosition.X,
+				referencePosition.X,
 				highY,
-				targetPosition.Z
+				referencePosition.Z
 			)
 
 		if
@@ -844,37 +1071,80 @@ function Farm.Create(
 				highTarget
 			)
 		then
-			return false
+			return nil, nil
 		end
 
 		if
 			not State.Settings.AutoFarm
 		then
-			return false
+			return nil, nil
 		end
 
 		--==================================================
-		-- 2. PARAR TWEEN E SNAPAR DIRETO NO SUB PORT
+		-- 2. ESPERAR O SUBMARINE WORKER CARREGAR
 		--==================================================
+
+		State:SetRuntime(
+			"Status",
+			"Procurando Submarine Worker"
+		)
+
+		local worker,
+			workerPart =
+				WaitForSubmarineWorker()
+
+		if
+			not worker
+			or
+			not workerPart
+		then
+			Warning(
+				"Cheguei à Tiki, mas não encontrei o Submarine Worker."
+			)
+
+			return nil, nil
+		end
+
+		--==================================================
+		-- 3. IR PARA CIMA DO NPC, NÃO PARA A ÁGUA
+		--==================================================
+
+		State:SetRuntime(
+			"Status",
+			"Indo até Submarine Worker"
+		)
+
+		local safeWorkerCFrame =
+			workerPart.CFrame
+			*
+			CFrame.new(
+				0,
+				WORKER_SAFE_OFFSET,
+				0
+			)
+
+		if
+			not TweenTo(
+				safeWorkerCFrame,
+				LONG_TRAVEL_VERTICAL_SPEED
+			)
+		then
+			return nil, nil
+		end
 
 		StopTween()
 
 		local _, humanoid,
 			finalRoot =
-			GetCharacter()
+				GetCharacter()
 
 		if
 			not humanoid
 			or
 			not finalRoot
 		then
-			return false
+			return nil, nil
 		end
-
-		State:SetRuntime(
-			"Status",
-			"Posicionando no Sub Port"
-		)
 
 		pcall(function()
 			finalRoot.AssemblyLinearVelocity =
@@ -883,44 +1153,24 @@ function Farm.Create(
 			finalRoot.AssemblyAngularVelocity =
 				Vector3.zero
 
+			-- Garante que terminamos exatamente acima do NPC.
 			finalRoot.CFrame =
-				TIKI_SUBMARINE_CFRAME
+				safeWorkerCFrame
 		end)
 
-		-- Não fazemos Tween até Y=25.
-		-- O snap é proposital para não atravessar
-		-- a água durante a descida.
-
 		task.wait(
-			0.15
+			0.25
 		)
-
-		local _, finalHumanoid,
-			checkRoot =
-			GetCharacter()
-
-		if
-			not finalHumanoid
-			or
-			not checkRoot
-		then
-			State:SetRuntime(
-				"Status",
-				"Morreu ao chegar na Tiki"
-			)
-
-			return false
-		end
 
 		local distance =
 			(
-				checkRoot.Position
+				finalRoot.Position
 				-
-				TIKI_SUBMARINE_CFRAME.Position
+				workerPart.Position
 			).Magnitude
 
 		Log(
-			"Distância do ponto do submarino: "
+			"Distância do Submarine Worker: "
 			..
 			string.format(
 				"%.1f",
@@ -930,20 +1180,15 @@ function Farm.Create(
 			" studs"
 		)
 
-		if distance > 35 then
-			State:SetRuntime(
-				"Status",
-				"Falha ao posicionar no Sub Port"
-			)
-
+		if distance > 20 then
 			Warning(
-				"O Deal Blox chegou à Tiki, mas não conseguiu posicionar no ponto do submarino."
+				"O Deal Blox encontrou o Submarine Worker, mas não conseguiu ficar perto dele."
 			)
 
-			return false
+			return nil, nil
 		end
 
-		return true
+		return worker, workerPart
 	end
 
 	--==================================================
@@ -1001,7 +1246,25 @@ function Farm.Create(
 			"Entrando na Submerged"
 		)
 
-		if not MoveToTikiSubmarine() then
+		local worker,
+			workerPart =
+				MoveToTikiSubmarine()
+
+		if
+			not worker
+			or
+			not workerPart
+		then
+			State:SetSetting(
+				"AutoFarm",
+				false
+			)
+
+			State:SetRuntime(
+				"Status",
+				"Entrada da Submerged cancelada"
+			)
+
 			return false
 		end
 
@@ -1011,91 +1274,117 @@ function Farm.Create(
 			return false
 		end
 
-		local _, humanoidBefore,
-			rootBefore =
-			GetCharacter()
+		--==================================================
+		-- 1. CONVERSAR COM O NPC
+		--==================================================
+
+		local prompt =
+			FindSubmarinePrompt(
+				worker,
+				workerPart
+			)
+
+		if prompt then
+			local promptSuccess =
+				TriggerSubmarinePrompt(
+					prompt
+				)
+
+			if promptSuccess then
+				Log(
+					"Interação com Submarine Worker acionada."
+				)
+			else
+				Warn(
+					"Não consegui disparar o ProximityPrompt do Submarine Worker."
+				)
+			end
+
+			-- Dá tempo para o diálogo abrir/processar.
+			task.wait(
+				0.75
+			)
+		else
+			Warn(
+				"ProximityPrompt do Submarine Worker não encontrado."
+			)
+		end
 
 		if
-			not humanoidBefore
-			or
-			not rootBefore
+			not State.Settings.AutoFarm
 		then
 			return false
 		end
 
-		task.wait(
-			0.75
-		)
+		--==================================================
+		-- 2. TENTAR A VIAGEM UMA ÚNICA VEZ
+		--==================================================
 
 		local Remote =
 			GetSubmarineRemote()
 
 		if not Remote then
+			State:SetSetting(
+				"AutoFarm",
+				false
+			)
+
 			State:SetRuntime(
 				"Status",
 				"Remote do submarino não encontrado"
 			)
 
 			Warning(
-				"Não encontrei o Remote do Submarine Worker."
+				"Não encontrei o sistema de viagem do Submarine Worker."
 			)
 
 			return false
 		end
 
-		State:SetRuntime(
-			"Status",
-			"Acionando submarino"
-		)
+		local _, beforeHumanoid,
+			beforeRoot =
+				GetCharacter()
+
+		if
+			not beforeHumanoid
+			or
+			not beforeRoot
+		then
+			State:SetSetting(
+				"AutoFarm",
+				false
+			)
+
+			return false
+		end
 
 		StopTween()
 
-		local lastError =
-			nil
+		pcall(function()
+			beforeRoot.AssemblyLinearVelocity =
+				Vector3.zero
 
-		-- Alguns hubs chamam a Remote diretamente depois
-		-- de posicionar no ponto do Sub Port. Fazemos até
-		-- 3 tentativas curtas antes de considerar falha.
-		for attempt = 1, 3 do
-			if
-				not State.Settings.AutoFarm
-			then
-				return false
-			end
+			beforeRoot.AssemblyAngularVelocity =
+				Vector3.zero
 
-			local _, currentHumanoid,
-				currentRoot =
-				GetCharacter()
-
-			if
-				not currentHumanoid
-				or
-				not currentRoot
-			then
-				State:SetRuntime(
-					"Status",
-					"Morreu antes do submarino"
+			-- Mantém o personagem perto do NPC.
+			beforeRoot.CFrame =
+				workerPart.CFrame
+				*
+				CFrame.new(
+					0,
+					WORKER_SAFE_OFFSET,
+					0
 				)
+		end)
 
-				return false
-			end
+		State:SetRuntime(
+			"Status",
+			"Solicitando viagem"
+		)
 
-			pcall(function()
-				currentRoot.AssemblyLinearVelocity =
-					Vector3.zero
-
-				currentRoot.AssemblyAngularVelocity =
-					Vector3.zero
-
-				currentRoot.CFrame =
-					TIKI_SUBMARINE_CFRAME
-			end)
-
-			task.wait(
-				0.10
-			)
-
-			local success, result =
+		local success,
+			result =
 				pcall(function()
 					return Remote:
 						InvokeServer(
@@ -1103,91 +1392,124 @@ function Farm.Create(
 						)
 				end)
 
-			if success then
-				if result ~= nil then
-					Log(
-						"Resposta do submarino (tentativa "
-						..
-						tostring(attempt)
-						..
-						"): "
-						..
-						tostring(result)
-					)
-				end
-			else
-				lastError =
-					result
+		if not success then
+			Warn(
+				"Erro ao solicitar viagem: "
+				..
+				tostring(result)
+			)
 
-				Warn(
-					"Falha no submarino, tentativa "
-					..
-					tostring(attempt)
-					..
-					": "
-					..
-					tostring(result)
-				)
-			end
+			State:SetSetting(
+				"AutoFarm",
+				false
+			)
 
 			State:SetRuntime(
 				"Status",
-				"Aguardando Submerged"
+				"Falha ao solicitar viagem"
 			)
 
-			local checkStarted =
-				tick()
+			Warning(
+				"Não consegui solicitar a viagem para a Submerged."
+			)
 
-			while
-				State.Settings.AutoFarm
-				and
-				tick() - checkStarted
-					<
-					2.2
-			do
-				if IsInsideSubmerged(
-					QuestData
-				) then
-					Log(
-						"✅ Submerged Island detectada."
-					)
-
-					return true
-				end
-
-				local _, aliveHumanoid =
-					GetCharacter()
-
-				if not aliveHumanoid then
-					State:SetRuntime(
-						"Status",
-						"Morreu tentando entrar"
-					)
-
-					return false
-				end
-
-				task.wait(
-					0.15
-				)
-			end
+			return false
 		end
 
-		if lastError then
-			Warn(
-				"Último erro do submarino: "
+		if result ~= nil then
+			Log(
+				"Resposta da viagem: "
 				..
-				tostring(lastError)
+				tostring(result)
 			)
 		end
+
+		--==================================================
+		-- 3. AGUARDAR SEM REPETIR / SEM IR PARA A ÁGUA
+		--==================================================
 
 		State:SetRuntime(
 			"Status",
-			"Submerged não detectada"
+			"Aguardando Submerged"
+		)
+
+		local started =
+			tick()
+
+		while
+			State.Settings.AutoFarm
+			and
+			tick() - started
+				<
+				SUBMERGED_TRAVEL_TIMEOUT
+		do
+			if IsInsideSubmerged(
+				QuestData
+			) then
+				Log(
+					"✅ Submerged Island detectada."
+				)
+
+				State:SetRuntime(
+					"Status",
+					"Submerged detectada"
+				)
+
+				return true
+			end
+
+			local _, aliveHumanoid,
+				aliveRoot =
+					GetCharacter()
+
+			if
+				not aliveHumanoid
+				or
+				not aliveRoot
+			then
+				State:SetSetting(
+					"AutoFarm",
+					false
+				)
+
+				State:SetRuntime(
+					"Status",
+					"Morreu tentando entrar"
+				)
+
+				Warning(
+					"O personagem morreu durante a tentativa de entrar na Submerged."
+				)
+
+				return false
+			end
+
+			-- Impede o loop antigo: enquanto esperamos,
+			-- não damos nenhum novo destino para o personagem.
+			pcall(function()
+				aliveRoot.AssemblyLinearVelocity =
+					Vector3.zero
+			end)
+
+			task.wait(
+				0.20
+			)
+		end
+
+		-- Uma tentativa falhou: para tudo em vez de
+		-- voltar para a água e repetir infinitamente.
+		State:SetSetting(
+			"AutoFarm",
+			false
+		)
+
+		State:SetRuntime(
+			"Status",
+			"Submerged não liberada"
 		)
 
 		Warning(
-			"O submarino foi acionado, mas a Submerged não foi detectada."
+			"Não foi possível entrar na Submerged. O Auto Farm foi desligado para evitar loop."
 		)
 
 		return false
