@@ -1,6 +1,7 @@
 --==================================================
 -- DEAL BLOX
 -- UI / INTERFACE
+-- V4 - Bolinha arrastável
 --==================================================
 
 local Interface = {}
@@ -30,6 +31,9 @@ function Interface.Create(
 	Components,
 	Debug
 )
+	--==================================================
+	-- SERVICES
+	--==================================================
 
 	local Players =
 		game:GetService("Players")
@@ -43,53 +47,277 @@ function Interface.Create(
 	local CoreGui =
 		game:GetService("CoreGui")
 
+	local Workspace =
+		game:GetService("Workspace")
+
 	local Player =
 		Players.LocalPlayer
 
 	while not Player do
-
 		task.wait()
-
 		Player =
 			Players.LocalPlayer
 	end
 
 	--==================================================
-	-- REMOVER GUI ANTIGA
+	-- CORES
+	--==================================================
+
+	local Colors =
+		Config.Colors
+		or
+		{}
+
+	local BackgroundColor =
+		Colors.Background
+		or
+		Color3.fromRGB(
+			8,
+			12,
+			22
+		)
+
+	local PanelColor =
+		Colors.Panel
+		or
+		Color3.fromRGB(
+			13,
+			19,
+			31
+		)
+
+	local Panel2Color =
+		Colors.Panel2
+		or
+		Color3.fromRGB(
+			20,
+			27,
+			41
+		)
+
+	local TextColor =
+		Colors.Text
+		or
+		Color3.fromRGB(
+			245,
+			247,
+			255
+		)
+
+	local SubTextColor =
+		Colors.SubText
+		or
+		Color3.fromRGB(
+			155,
+			166,
+			185
+		)
+
+	local BlueColor =
+		Colors.Blue
+		or
+		Color3.fromRGB(
+			30,
+			90,
+			190
+		)
+
+	local BlueNeon =
+		Colors.BlueNeon
+		or
+		Color3.fromRGB(
+			0,
+			180,
+			255
+		)
+
+	local RedColor =
+		Colors.Red
+		or
+		Color3.fromRGB(
+			165,
+			38,
+			58
+		)
+
+	local RedNeon =
+		Colors.RedNeon
+		or
+		Color3.fromRGB(
+			255,
+			55,
+			85
+		)
+
+	--==================================================
+	-- HELPERS
+	--==================================================
+
+	local function Corner(
+		parent,
+		radius
+	)
+		local object =
+			Instance.new(
+				"UICorner"
+			)
+
+		object.CornerRadius =
+			UDim.new(
+				0,
+				radius
+				or
+				8
+			)
+
+		object.Parent =
+			parent
+
+		return object
+	end
+
+	local function Stroke(
+		parent,
+		color,
+		thickness,
+		transparency
+	)
+		local object =
+			Instance.new(
+				"UIStroke"
+			)
+
+		object.Color =
+			color
+			or
+			BlueNeon
+
+		object.Thickness =
+			thickness
+			or
+			1
+
+		object.Transparency =
+			transparency
+			or
+			0
+
+		object.Parent =
+			parent
+
+		return object
+	end
+
+	local function Label(
+		parent,
+		text,
+		position,
+		size,
+		textSize,
+		font,
+		color
+	)
+		local object =
+			Instance.new(
+				"TextLabel"
+			)
+
+		object.Parent =
+			parent
+
+		object.Position =
+			position
+
+		object.Size =
+			size
+
+		object.BackgroundTransparency =
+			1
+
+		object.BorderSizePixel =
+			0
+
+		object.Text =
+			text
+			or
+			""
+
+		object.TextColor3 =
+			color
+			or
+			TextColor
+
+		object.TextSize =
+			textSize
+			or
+			12
+
+		object.Font =
+			font
+			or
+			Enum.Font.Gotham
+
+		object.TextXAlignment =
+			Enum.TextXAlignment.Left
+
+		object.TextYAlignment =
+			Enum.TextYAlignment.Center
+
+		return object
+	end
+
+	local function GetViewportSize()
+		local camera =
+			Workspace.CurrentCamera
+
+		if camera then
+			return
+				camera.ViewportSize
+		end
+
+		return
+			Vector2.new(
+				1280,
+				720
+			)
+	end
+
+	--==================================================
+	-- REMOVER INTERFACE ANTIGA
 	--==================================================
 
 	pcall(function()
-
 		local old =
-			CoreGui:FindFirstChild(
-				"DealBlox"
-			)
-
-		if old then
-			old:Destroy()
-		end
-
-	end)
-
-	pcall(function()
-
-		local playerGui =
-			Player:FindFirstChild(
-				"PlayerGui"
-			)
-
-		if playerGui then
-
-			local old =
-				playerGui:FindFirstChild(
+			CoreGui:
+				FindFirstChild(
 					"DealBlox"
 				)
 
-			if old then
-				old:Destroy()
-			end
+		if old then
+			old:
+				Destroy()
 		end
+	end)
 
+	pcall(function()
+		local PlayerGui =
+			Player:
+				FindFirstChild(
+					"PlayerGui"
+				)
+
+		local old =
+			PlayerGui
+			and
+			PlayerGui:
+				FindFirstChild(
+					"DealBlox"
+				)
+
+		if old then
+			old:
+				Destroy()
+		end
 	end)
 
 	--==================================================
@@ -97,7 +325,9 @@ function Interface.Create(
 	--==================================================
 
 	local Gui =
-		Instance.new("ScreenGui")
+		Instance.new(
+			"ScreenGui"
+		)
 
 	Gui.Name =
 		"DealBlox"
@@ -111,12 +341,13 @@ function Interface.Create(
 	Gui.ZIndexBehavior =
 		Enum.ZIndexBehavior.Sibling
 
+	Gui.DisplayOrder =
+		999
+
 	local parentSuccess =
 		pcall(function()
-
 			Gui.Parent =
 				CoreGui
-
 		end)
 
 	if
@@ -124,25 +355,33 @@ function Interface.Create(
 		or
 		not Gui.Parent
 	then
-
 		Gui.Parent =
-			Player:WaitForChild(
-				"PlayerGui"
-			)
+			Player:
+				WaitForChild(
+					"PlayerGui"
+				)
 	end
 
 	--==================================================
-	-- BOTÃO FLUTUANTE
+	-- BOLINHA FLUTUANTE
 	--==================================================
 
 	local OpenButton =
-		Instance.new("ImageButton")
+		Instance.new(
+			"ImageButton"
+		)
+
+	OpenButton.Name =
+		"OpenButton"
 
 	OpenButton.Parent =
 		Gui
 
-	OpenButton.Name =
-		"OpenButton"
+	OpenButton.AnchorPoint =
+		Vector2.new(
+			0.5,
+			0.5
+		)
 
 	OpenButton.Size =
 		UDim2.fromOffset(
@@ -153,67 +392,99 @@ function Interface.Create(
 	OpenButton.Position =
 		UDim2.new(
 			0,
-			20,
+			52,
 			0.5,
-			-32
+			0
 		)
 
 	OpenButton.BackgroundColor3 =
-		Config.Colors.Panel
+		PanelColor
 
 	OpenButton.BackgroundTransparency =
-		0.10
+		0.08
 
 	OpenButton.BorderSizePixel =
 		0
 
 	OpenButton.Image =
 		Config.Logo
+		or
+		""
 
 	OpenButton.ScaleType =
 		Enum.ScaleType.Fit
 
+	OpenButton.AutoButtonColor =
+		false
+
+	OpenButton.Active =
+		true
+
 	OpenButton.ZIndex =
 		1000
 
-	Components.Corner(
+	Corner(
 		OpenButton,
 		999
 	)
 
 	local OpenStroke =
-		Components.Stroke(
+		Stroke(
 			OpenButton,
-			Config.Colors.BlueNeon,
+			BlueNeon,
 			2.5,
 			0
 		)
 
+	--==================================================
+	-- ANIMAÇÃO DA BOLINHA
+	--==================================================
+
 	task.spawn(function()
-
 		while OpenButton.Parent do
+			local tween1 =
+				TweenService:
+					Create(
+						OpenStroke,
+						TweenInfo.new(
+							1.3
+						),
+						{
+							Color =
+								RedNeon
+						}
+					)
 
-			TweenService:Create(
-				OpenStroke,
-				TweenInfo.new(1.3),
-				{
-					Color =
-						Config.Colors.RedNeon
-				}
-			):Play()
+			tween1:
+				Play()
 
-			task.wait(1.3)
+			task.wait(
+				1.3
+			)
 
-			TweenService:Create(
-				OpenStroke,
-				TweenInfo.new(1.3),
-				{
-					Color =
-						Config.Colors.BlueNeon
-				}
-			):Play()
+			if not OpenStroke.Parent then
+				break
+			end
 
-			task.wait(1.3)
+			local tween2 =
+				TweenService:
+					Create(
+						OpenStroke,
+						TweenInfo.new(
+							1.3
+						),
+						{
+							Color =
+								BlueNeon
+						}
+					)
+
+			tween2:
+				Play()
+
+			task.wait(
+				1.3
+			)
 		end
 	end)
 
@@ -222,13 +493,15 @@ function Interface.Create(
 	--==================================================
 
 	local Main =
-		Instance.new("Frame")
-
-	Main.Parent =
-		Gui
+		Instance.new(
+			"Frame"
+		)
 
 	Main.Name =
 		"Main"
+
+	Main.Parent =
+		Gui
 
 	Main.AnchorPoint =
 		Vector2.new(
@@ -251,10 +524,10 @@ function Interface.Create(
 		)
 
 	Main.BackgroundColor3 =
-		Config.Colors.Background
+		BackgroundColor
 
 	Main.BackgroundTransparency =
-		0.12
+		0.10
 
 	Main.BorderSizePixel =
 		0
@@ -268,15 +541,18 @@ function Interface.Create(
 	Main.Visible =
 		false
 
-	Components.Corner(
+	Main.ZIndex =
+		10
+
+	Corner(
 		Main,
 		15
 	)
 
 	local MainStroke =
-		Components.Stroke(
+		Stroke(
 			Main,
-			Config.Colors.BlueNeon,
+			BlueNeon,
 			2,
 			0.05
 		)
@@ -302,30 +578,44 @@ function Interface.Create(
 		)
 
 	task.spawn(function()
-
 		while Main.Parent do
+			TweenService:
+				Create(
+					MainStroke,
+					TweenInfo.new(
+						2
+					),
+					{
+						Color =
+							RedNeon
+					}
+				):
+				Play()
 
-			TweenService:Create(
-				MainStroke,
-				TweenInfo.new(2),
-				{
-					Color =
-						Config.Colors.RedNeon
-				}
-			):Play()
+			task.wait(
+				2
+			)
 
-			task.wait(2)
+			if not MainStroke.Parent then
+				break
+			end
 
-			TweenService:Create(
-				MainStroke,
-				TweenInfo.new(2),
-				{
-					Color =
-						Config.Colors.BlueNeon
-				}
-			):Play()
+			TweenService:
+				Create(
+					MainStroke,
+					TweenInfo.new(
+						2
+					),
+					{
+						Color =
+							BlueNeon
+					}
+				):
+				Play()
 
-			task.wait(2)
+			task.wait(
+				2
+			)
 		end
 	end)
 
@@ -334,13 +624,15 @@ function Interface.Create(
 	--==================================================
 
 	local TopBar =
-		Instance.new("Frame")
-
-	TopBar.Parent =
-		Main
+		Instance.new(
+			"Frame"
+		)
 
 	TopBar.Name =
 		"TopBar"
+
+	TopBar.Parent =
+		Main
 
 	TopBar.Size =
 		UDim2.new(
@@ -363,16 +655,21 @@ function Interface.Create(
 	TopBar.BorderSizePixel =
 		0
 
+	TopBar.Active =
+		true
+
 	TopBar.ZIndex =
 		20
 
-	Components.Corner(
+	Corner(
 		TopBar,
 		15
 	)
 
 	local TopFix =
-		Instance.new("Frame")
+		Instance.new(
+			"Frame"
+		)
 
 	TopFix.Parent =
 		TopBar
@@ -406,7 +703,9 @@ function Interface.Create(
 		20
 
 	local BlueLine =
-		Instance.new("Frame")
+		Instance.new(
+			"Frame"
+		)
 
 	BlueLine.Parent =
 		TopBar
@@ -428,7 +727,7 @@ function Interface.Create(
 		)
 
 	BlueLine.BackgroundColor3 =
-		Config.Colors.BlueNeon
+		BlueNeon
 
 	BlueLine.BorderSizePixel =
 		0
@@ -437,7 +736,9 @@ function Interface.Create(
 		25
 
 	local RedLine =
-		Instance.new("Frame")
+		Instance.new(
+			"Frame"
+		)
 
 	RedLine.Parent =
 		TopBar
@@ -459,7 +760,7 @@ function Interface.Create(
 		)
 
 	RedLine.BackgroundColor3 =
-		Config.Colors.RedNeon
+		RedNeon
 
 	RedLine.BorderSizePixel =
 		0
@@ -472,7 +773,9 @@ function Interface.Create(
 	--==================================================
 
 	local Logo =
-		Instance.new("ImageLabel")
+		Instance.new(
+			"ImageLabel"
+		)
 
 	Logo.Parent =
 		TopBar
@@ -494,6 +797,8 @@ function Interface.Create(
 
 	Logo.Image =
 		Config.Logo
+		or
+		""
 
 	Logo.ScaleType =
 		Enum.ScaleType.Fit
@@ -502,90 +807,48 @@ function Interface.Create(
 		30
 
 	--==================================================
-	-- TÍTULO
+	-- TÍTULO / SITE
 	--==================================================
 
 	local Title =
-		Instance.new("TextLabel")
-
-	Title.Parent =
-		TopBar
-
-	Title.Position =
-		UDim2.fromOffset(
-			59,
-			0
+		Label(
+			TopBar,
+			"DEAL BLOX",
+			UDim2.fromOffset(
+				59,
+				0
+			),
+			UDim2.fromOffset(
+				120,
+				56
+			),
+			18,
+			Enum.Font.GothamBold,
+			TextColor
 		)
-
-	Title.Size =
-		UDim2.fromOffset(
-			120,
-			56
-		)
-
-	Title.BackgroundTransparency =
-		1
-
-	Title.Text =
-		"DEAL BLOX"
-
-	Title.TextColor3 =
-		Config.Colors.Text
-
-	Title.TextSize =
-		18
-
-	Title.Font =
-		Enum.Font.GothamBold
-
-	Title.TextXAlignment =
-		Enum.TextXAlignment.Left
 
 	Title.ZIndex =
 		30
 
-	--==================================================
-	-- SITE
-	--==================================================
-
 	local Site =
-		Instance.new("TextLabel")
-
-	Site.Parent =
-		TopBar
+		Label(
+			TopBar,
+			"dealblox.com.br",
+			UDim2.fromOffset(
+				178,
+				0
+			),
+			UDim2.fromOffset(
+				112,
+				56
+			),
+			11,
+			Enum.Font.Gotham,
+			BlueNeon
+		)
 
 	Site.Name =
 		"Site"
-
-	Site.Position =
-		UDim2.fromOffset(
-			178,
-			0
-		)
-
-	Site.Size =
-		UDim2.fromOffset(
-			112,
-			56
-		)
-
-	Site.BackgroundTransparency =
-		1
-
-	Site.Text =
-		"dealblox.com.br"
-
-	Site.TextColor3 =
-		Config.Colors.BlueNeon
-
-	Site.TextSize =
-		11
-
-	Site.Font =
-		Enum.Font.Gotham
-
-	Site.TextXAlignment =
-		Enum.TextXAlignment.Left
 
 	Site.ZIndex =
 		30
@@ -601,16 +864,20 @@ function Interface.Create(
 	}
 
 	local CurrentSea =
-		SeaMap[game.PlaceId]
+		SeaMap[
+			game.PlaceId
+		]
 
 	local SeaBadge =
-		Instance.new("TextLabel")
-
-	SeaBadge.Parent =
-		TopBar
+		Instance.new(
+			"TextLabel"
+		)
 
 	SeaBadge.Name =
 		"SeaBadge"
+
+	SeaBadge.Parent =
+		TopBar
 
 	SeaBadge.Position =
 		UDim2.fromOffset(
@@ -625,7 +892,7 @@ function Interface.Create(
 		)
 
 	SeaBadge.BackgroundColor3 =
-		Config.Colors.Panel2
+		Panel2Color
 
 	SeaBadge.BackgroundTransparency =
 		0.02
@@ -636,12 +903,18 @@ function Interface.Create(
 	SeaBadge.Text =
 		CurrentSea
 			and
-			("SEA " .. CurrentSea)
+			(
+				"SEA "
+				..
+				tostring(
+					CurrentSea
+				)
+			)
 			or
 			"SEA ?"
 
 	SeaBadge.TextColor3 =
-		Config.Colors.Text
+		TextColor
 
 	SeaBadge.TextSize =
 		11
@@ -652,14 +925,14 @@ function Interface.Create(
 	SeaBadge.ZIndex =
 		31
 
-	Components.Corner(
+	Corner(
 		SeaBadge,
 		7
 	)
 
-	Components.Stroke(
+	Stroke(
 		SeaBadge,
-		Config.Colors.BlueNeon,
+		BlueNeon,
 		1.5,
 		0.05
 	)
@@ -669,7 +942,12 @@ function Interface.Create(
 	--==================================================
 
 	local Minimize =
-		Instance.new("TextButton")
+		Instance.new(
+			"TextButton"
+		)
+
+	Minimize.Name =
+		"Minimize"
 
 	Minimize.Parent =
 		TopBar
@@ -689,7 +967,7 @@ function Interface.Create(
 		)
 
 	Minimize.BackgroundColor3 =
-		Config.Colors.Blue
+		BlueColor
 
 	Minimize.BorderSizePixel =
 		0
@@ -698,7 +976,7 @@ function Interface.Create(
 		"—"
 
 	Minimize.TextColor3 =
-		Config.Colors.Text
+		TextColor
 
 	Minimize.TextSize =
 		20
@@ -709,17 +987,22 @@ function Interface.Create(
 	Minimize.ZIndex =
 		35
 
-	Components.Corner(
+	Corner(
 		Minimize,
 		8
 	)
 
 	--==================================================
-	-- X
+	-- FECHAR
 	--==================================================
 
 	local Close =
-		Instance.new("TextButton")
+		Instance.new(
+			"TextButton"
+		)
+
+	Close.Name =
+		"Close"
 
 	Close.Parent =
 		TopBar
@@ -739,7 +1022,7 @@ function Interface.Create(
 		)
 
 	Close.BackgroundColor3 =
-		Config.Colors.Red
+		RedColor
 
 	Close.BorderSizePixel =
 		0
@@ -748,7 +1031,7 @@ function Interface.Create(
 		"X"
 
 	Close.TextColor3 =
-		Config.Colors.Text
+		TextColor
 
 	Close.TextSize =
 		14
@@ -759,7 +1042,7 @@ function Interface.Create(
 	Close.ZIndex =
 		35
 
-	Components.Corner(
+	Corner(
 		Close,
 		8
 	)
@@ -769,7 +1052,12 @@ function Interface.Create(
 	--==================================================
 
 	local Body =
-		Instance.new("Frame")
+		Instance.new(
+			"Frame"
+		)
+
+	Body.Name =
+		"Body"
 
 	Body.Parent =
 		Main
@@ -791,18 +1079,26 @@ function Interface.Create(
 	Body.BackgroundTransparency =
 		1
 
+	Body.BorderSizePixel =
+		0
+
+	Body.ZIndex =
+		11
+
 	--==================================================
 	-- SIDEBAR
 	--==================================================
 
 	local Sidebar =
-		Instance.new("ScrollingFrame")
-
-	Sidebar.Parent =
-		Body
+		Instance.new(
+			"ScrollingFrame"
+		)
 
 	Sidebar.Name =
 		"Sidebar"
+
+	Sidebar.Parent =
+		Body
 
 	Sidebar.Size =
 		UDim2.new(
@@ -829,7 +1125,7 @@ function Interface.Create(
 		3
 
 	Sidebar.ScrollBarImageColor3 =
-		Config.Colors.BlueNeon
+		BlueNeon
 
 	Sidebar.AutomaticCanvasSize =
 		Enum.AutomaticSize.Y
@@ -837,34 +1133,56 @@ function Interface.Create(
 	Sidebar.CanvasSize =
 		UDim2.new()
 
+	Sidebar.ZIndex =
+		12
+
 	local SidebarPadding =
-		Instance.new("UIPadding")
+		Instance.new(
+			"UIPadding"
+		)
 
 	SidebarPadding.Parent =
 		Sidebar
 
 	SidebarPadding.PaddingTop =
-		UDim.new(0, 10)
+		UDim.new(
+			0,
+			12
+		)
 
 	SidebarPadding.PaddingBottom =
-		UDim.new(0, 10)
+		UDim.new(
+			0,
+			12
+		)
 
 	SidebarPadding.PaddingLeft =
-		UDim.new(0, 7)
+		UDim.new(
+			0,
+			10
+		)
 
 	SidebarPadding.PaddingRight =
-		UDim.new(0, 7)
+		UDim.new(
+			0,
+			10
+		)
 
-	local SidebarLayout =
-		Instance.new("UIListLayout")
+	local SidebarList =
+		Instance.new(
+			"UIListLayout"
+		)
 
-	SidebarLayout.Parent =
+	SidebarList.Parent =
 		Sidebar
 
-	SidebarLayout.Padding =
-		UDim.new(0, 6)
+	SidebarList.Padding =
+		UDim.new(
+			0,
+			7
+		)
 
-	SidebarLayout.SortOrder =
+	SidebarList.SortOrder =
 		Enum.SortOrder.LayoutOrder
 
 	--==================================================
@@ -872,19 +1190,19 @@ function Interface.Create(
 	--==================================================
 
 	local Content =
-		Instance.new("Frame")
-
-	Content.Parent =
-		Body
+		Instance.new(
+			"Frame"
+		)
 
 	Content.Name =
 		"Content"
 
+	Content.Parent =
+		Body
+
 	Content.Position =
-		UDim2.new(
-			0,
+		UDim2.fromOffset(
 			185,
-			0,
 			0
 		)
 
@@ -896,14 +1214,17 @@ function Interface.Create(
 			0
 		)
 
-	Content.BackgroundColor3 =
-		Config.Colors.Panel
-
 	Content.BackgroundTransparency =
-		0.16
+		1
 
 	Content.BorderSizePixel =
 		0
+
+	Content.ClipsDescendants =
+		true
+
+	Content.ZIndex =
+		12
 
 	--==================================================
 	-- ABAS
@@ -911,226 +1232,93 @@ function Interface.Create(
 
 	local Tabs = {}
 
-	local function ConstructionPage(
-		Page,
-		Name
+	local function CreateTab(
+		Name,
+		Index
 	)
-
-		local icon =
-			Instance.new("TextLabel")
-
-		icon.Parent =
-			Page
-
-		icon.Position =
-			UDim2.new(
-				0,
-				0,
-				0.5,
-				-90
-			)
-
-		icon.Size =
-			UDim2.new(
-				1,
-				0,
-				0,
-				60
-			)
-
-		icon.BackgroundTransparency =
-			1
-
-		icon.Text =
-			"🚧"
-
-		icon.TextSize =
-			46
-
-		local title =
-			Instance.new("TextLabel")
-
-		title.Parent =
-			Page
-
-		title.Position =
-			UDim2.new(
-				0,
-				20,
-				0.5,
-				-20
-			)
-
-		title.Size =
-			UDim2.new(
-				1,
-				-40,
-				0,
-				35
-			)
-
-		title.BackgroundTransparency =
-			1
-
-		title.Text =
-			Name
-
-		title.TextColor3 =
-			Config.Colors.Text
-
-		title.TextSize =
-			20
-
-		title.Font =
-			Enum.Font.GothamBold
-
-		local text =
-			Instance.new("TextLabel")
-
-		text.Parent =
-			Page
-
-		text.Position =
-			UDim2.new(
-				0,
-				20,
-				0.5,
-				20
-			)
-
-		text.Size =
-			UDim2.new(
-				1,
-				-40,
-				0,
-				50
-			)
-
-		text.BackgroundTransparency =
-			1
-
-		text.Text =
-			"Esta aba ainda está em obra."
-
-		text.TextColor3 =
-			Config.Colors.SubText
-
-		text.TextSize =
-			13
-
-		text.Font =
-			Enum.Font.Gotham
-	end
-
-	local function SelectTab(
-		Name
-	)
-
-		if not Tabs[Name] then
-			return
-		end
-
-		for _, tab in pairs(Tabs) do
-
-			tab.Page.Visible =
-				false
-
-			tab.Button.BackgroundColor3 =
-				Color3.fromRGB(
-					17,
-					23,
-					35
-				)
-
-			tab.Stroke.Thickness =
-				0
-		end
-
-		local Selected =
-			Tabs[Name]
-
-		Selected.Page.Visible =
-			true
-
-		Selected.Button.BackgroundColor3 =
-			Color3.fromRGB(
-				15,
-				55,
-				105
-			)
-
-		Selected.Stroke.Thickness =
-			1.5
-	end
-
-	for Order, Name in ipairs(
-		TAB_NAMES
-	) do
-
 		local Button =
-			Instance.new("TextButton")
+			Instance.new(
+				"TextButton"
+			)
+
+		Button.Name =
+			Name
+			..
+			"Button"
 
 		Button.Parent =
 			Sidebar
+
+		Button.LayoutOrder =
+			Index
 
 		Button.Size =
 			UDim2.new(
 				1,
 				0,
 				0,
-				37
+				40
 			)
 
 		Button.BackgroundColor3 =
-			Color3.fromRGB(
-				17,
-				23,
-				35
-			)
+			Panel2Color
+
+		Button.BackgroundTransparency =
+			0.38
 
 		Button.BorderSizePixel =
 			0
+
+		Button.AutoButtonColor =
+			false
 
 		Button.Text =
 			Name
 
 		Button.TextColor3 =
-			Config.Colors.Text
+			SubTextColor
 
 		Button.TextSize =
 			11
 
 		Button.Font =
-			Enum.Font.Gotham
+			Enum.Font.GothamSemibold
 
-		Button.LayoutOrder =
-			Order
+		Button.TextWrapped =
+			true
 
-		Components.Corner(
+		Button.ZIndex =
+			15
+
+		Corner(
 			Button,
-			7
+			8
 		)
 
-		local Stroke =
-			Components.Stroke(
+		local ButtonStroke =
+			Stroke(
 				Button,
-				Order % 2 == 0
-					and
-					Config.Colors.RedNeon
-					or
-					Config.Colors.BlueNeon,
-				0,
-				0.1
+				BlueNeon,
+				1,
+				0.78
 			)
 
 		local Page =
-			Instance.new("Frame")
+			Instance.new(
+				"Frame"
+			)
+
+		Page.Name =
+			Name
 
 		Page.Parent =
 			Content
 
-		Page.Name =
-			Name
+		Page.Position =
+			UDim2.fromOffset(
+				0,
+				0
+			)
 
 		Page.Size =
 			UDim2.fromScale(
@@ -1141,38 +1329,110 @@ function Interface.Create(
 		Page.BackgroundTransparency =
 			1
 
+		Page.BorderSizePixel =
+			0
+
 		Page.Visible =
 			false
 
+		Page.ClipsDescendants =
+			true
+
+		Page.ZIndex =
+			13
+
 		Tabs[Name] = {
-			Button = Button,
-			Stroke = Stroke,
-			Page = Page
+			Button =
+				Button,
+
+			ButtonStroke =
+				ButtonStroke,
+
+			Page =
+				Page
 		}
 
-		if
-			Name ~= "Principal"
-			and
-			Name ~= "Farm"
-			and
-			Name ~= "Configurações de Farm"
-		then
+		return
+			Tabs[Name]
+	end
 
-			ConstructionPage(
-				Page,
+	for Index, Name in ipairs(
+		TAB_NAMES
+	) do
+		CreateTab(
+			Name,
+			Index
+		)
+	end
+
+	local CurrentTab =
+		nil
+
+	local function SelectTab(
+		Name
+	)
+		local Selected =
+			Tabs[
 				Name
-			)
+			]
+
+		if not Selected then
+			return
 		end
 
-		Button.Activated:Connect(
-			function()
+		CurrentTab =
+			Name
 
+		for TabName, Tab in pairs(
+			Tabs
+		) do
+			local active =
+				TabName
+				==
+				Name
+
+			Tab.Page.Visible =
+				active
+
+			Tab.Button.BackgroundTransparency =
+				active
+					and
+					0.05
+					or
+					0.38
+
+			Tab.Button.BackgroundColor3 =
+				active
+					and
+					BlueColor
+					or
+					Panel2Color
+
+			Tab.Button.TextColor3 =
+				active
+					and
+					TextColor
+					or
+					SubTextColor
+
+			Tab.ButtonStroke.Transparency =
+				active
+					and
+					0.15
+					or
+					0.78
+		end
+	end
+
+	for Name, Tab in pairs(
+		Tabs
+	) do
+		Tab.Button.Activated:
+			Connect(function()
 				SelectTab(
 					Name
 				)
-
-			end
-		)
+			end)
 	end
 
 	SelectTab(
@@ -1180,7 +1440,7 @@ function Interface.Create(
 	)
 
 	--==================================================
-	-- ABRIR
+	-- ABRIR / MINIMIZAR
 	--==================================================
 
 	local Opened =
@@ -1200,23 +1460,24 @@ function Interface.Create(
 	local function SetOpen(
 		State
 	)
-
 		Opened =
 			State
+			==
+			true
 
 		Main.Visible =
-			State
+			Opened
 	end
 
 	local function SetMinimized(
 		State
 	)
-
 		Minimized =
 			State
+			==
+			true
 
-		if State then
-
+		if Minimized then
 			Body.Visible =
 				false
 
@@ -1242,9 +1503,7 @@ function Interface.Create(
 
 			Minimize.Text =
 				"+"
-
 		else
-
 			SizeConstraint.MinSize =
 				Vector2.new(
 					500,
@@ -1268,130 +1527,485 @@ function Interface.Create(
 		end
 	end
 
-	OpenButton.Activated:Connect(
-		function()
-
-			if Minimized then
-				SetMinimized(false)
-			end
-
+	Close.Activated:
+		Connect(function()
 			SetOpen(
-				not Opened
+				false
 			)
-		end
-	)
+		end)
 
-	Close.Activated:Connect(
-		function()
-
-			SetOpen(false)
-
-		end
-	)
-
-	Minimize.Activated:Connect(
-		function()
-
+	Minimize.Activated:
+		Connect(function()
 			SetMinimized(
 				not Minimized
 			)
-
-		end
-	)
+		end)
 
 	--==================================================
-	-- DRAG
+	-- DRAG DO PAINEL
 	--==================================================
 
-	local Dragging =
+	local MainDragging =
 		false
 
-	local DragStart =
+	local MainDragStart =
 		nil
 
-	local StartPosition =
+	local MainStartPosition =
 		nil
 
-	TopBar.InputBegan:Connect(
-		function(Input)
-
+	TopBar.InputBegan:
+		Connect(function(
+			Input
+		)
 			if
 				Input.UserInputType
 					==
-				Enum.UserInputType.MouseButton1
+					Enum.UserInputType.MouseButton1
 				or
 				Input.UserInputType
 					==
-				Enum.UserInputType.Touch
+					Enum.UserInputType.Touch
 			then
+				-- Não inicia drag se começou nos botões.
+				local inputX =
+					Input.Position.X
 
-				Dragging =
+				local inputY =
+					Input.Position.Y
+
+				local function Inside(
+					Object
+				)
+					local Position =
+						Object.AbsolutePosition
+
+					local Size =
+						Object.AbsoluteSize
+
+					return
+						inputX
+							>=
+							Position.X
+						and
+						inputX
+							<=
+							Position.X
+								+
+								Size.X
+						and
+						inputY
+							>=
+							Position.Y
+						and
+						inputY
+							<=
+							Position.Y
+								+
+								Size.Y
+				end
+
+				if
+					Inside(
+						Minimize
+					)
+					or
+					Inside(
+						Close
+					)
+				then
+					return
+				end
+
+				MainDragging =
 					true
 
-				DragStart =
+				MainDragStart =
 					Input.Position
 
-				StartPosition =
+				MainStartPosition =
 					Main.Position
 			end
-		end
-	)
+		end)
 
-	UserInputService.InputChanged:Connect(
-		function(Input)
-
-			if not Dragging then
+	UserInputService.InputChanged:
+		Connect(function(
+			Input
+		)
+			if
+				not MainDragging
+			then
 				return
 			end
 
 			if
 				Input.UserInputType
 					==
-				Enum.UserInputType.MouseMovement
+					Enum.UserInputType.MouseMovement
 				or
 				Input.UserInputType
 					==
-				Enum.UserInputType.Touch
+					Enum.UserInputType.Touch
 			then
-
 				local Delta =
 					Input.Position
 					-
-					DragStart
+					MainDragStart
 
 				Main.Position =
 					UDim2.new(
-						StartPosition.X.Scale,
-						StartPosition.X.Offset
+						MainStartPosition.X.Scale,
+						MainStartPosition.X.Offset
 							+
 							Delta.X,
-						StartPosition.Y.Scale,
-						StartPosition.Y.Offset
+						MainStartPosition.Y.Scale,
+						MainStartPosition.Y.Offset
 							+
 							Delta.Y
 					)
 			end
-		end
-	)
+		end)
 
-	UserInputService.InputEnded:Connect(
-		function(Input)
+	UserInputService.InputEnded:
+		Connect(function(
+			Input
+		)
+			if
+				Input.UserInputType
+					==
+					Enum.UserInputType.MouseButton1
+				or
+				Input.UserInputType
+					==
+					Enum.UserInputType.Touch
+			then
+				MainDragging =
+					false
+			end
+		end)
+
+	--==================================================
+	-- DRAG DA BOLINHA
+	--==================================================
+	--
+	-- Clique curto:
+	--     abre / fecha o painel.
+	--
+	-- Arrastar:
+	--     move a bolinha pela tela sem abrir/fechar.
+	--
+	-- Funciona em mouse e touch.
+	--==================================================
+
+	local BubbleDragging =
+		false
+
+	local BubbleDragStart =
+		nil
+
+	local BubbleStartCenter =
+		nil
+
+	local BubbleMoved =
+		false
+
+	local SuppressOpen =
+		false
+
+	local DRAG_THRESHOLD =
+		6
+
+	local function ClampBubble(
+		X,
+		Y
+	)
+		local Viewport =
+			GetViewportSize()
+
+		local HalfWidth =
+			math.max(
+				OpenButton.AbsoluteSize.X
+					/
+					2,
+				32
+			)
+
+		local HalfHeight =
+			math.max(
+				OpenButton.AbsoluteSize.Y
+					/
+					2,
+				32
+			)
+
+		local ClampedX =
+			math.clamp(
+				X,
+				HalfWidth
+					+
+					4,
+				math.max(
+					HalfWidth
+						+
+						4,
+					Viewport.X
+						-
+						HalfWidth
+						-
+						4
+				)
+			)
+
+		local ClampedY =
+			math.clamp(
+				Y,
+				HalfHeight
+					+
+					4,
+				math.max(
+					HalfHeight
+						+
+						4,
+					Viewport.Y
+						-
+						HalfHeight
+						-
+						4
+				)
+			)
+
+		return
+			ClampedX,
+			ClampedY
+	end
+
+	OpenButton.InputBegan:
+		Connect(function(
+			Input
+		)
+			if
+				Input.UserInputType
+					==
+					Enum.UserInputType.MouseButton1
+				or
+				Input.UserInputType
+					==
+					Enum.UserInputType.Touch
+			then
+				BubbleDragging =
+					true
+
+				BubbleDragStart =
+					Input.Position
+
+				local AbsolutePosition =
+					OpenButton.AbsolutePosition
+
+				local AbsoluteSize =
+					OpenButton.AbsoluteSize
+
+				BubbleStartCenter =
+					Vector2.new(
+						AbsolutePosition.X
+							+
+							AbsoluteSize.X
+								/
+								2,
+						AbsolutePosition.Y
+							+
+							AbsoluteSize.Y
+								/
+								2
+					)
+
+				BubbleMoved =
+					false
+			end
+		end)
+
+	UserInputService.InputChanged:
+		Connect(function(
+			Input
+		)
+			if
+				not BubbleDragging
+			then
+				return
+			end
 
 			if
 				Input.UserInputType
 					==
-				Enum.UserInputType.MouseButton1
+					Enum.UserInputType.MouseMovement
 				or
 				Input.UserInputType
 					==
-				Enum.UserInputType.Touch
+					Enum.UserInputType.Touch
 			then
+				local Delta =
+					Input.Position
+					-
+					BubbleDragStart
 
-				Dragging =
+				if
+					Delta.Magnitude
+					>=
+					DRAG_THRESHOLD
+				then
+					BubbleMoved =
+						true
+				end
+
+				if BubbleMoved then
+					local Wanted =
+						BubbleStartCenter
+						+
+						Vector2.new(
+							Delta.X,
+							Delta.Y
+						)
+
+					local X,
+						Y =
+							ClampBubble(
+								Wanted.X,
+								Wanted.Y
+							)
+
+					OpenButton.Position =
+						UDim2.fromOffset(
+							X,
+							Y
+						)
+				end
+			end
+		end)
+
+	UserInputService.InputEnded:
+		Connect(function(
+			Input
+		)
+			if
+				Input.UserInputType
+					==
+					Enum.UserInputType.MouseButton1
+				or
+				Input.UserInputType
+					==
+					Enum.UserInputType.Touch
+			then
+				if
+					BubbleDragging
+					and
+					BubbleMoved
+				then
+					SuppressOpen =
+						true
+
+					task.delay(
+						0.12,
+						function()
+							SuppressOpen =
+								false
+						end
+					)
+				end
+
+				BubbleDragging =
 					false
 			end
+		end)
+
+	OpenButton.Activated:
+		Connect(function()
+			if
+				SuppressOpen
+				or
+				BubbleMoved
+			then
+				BubbleMoved =
+					false
+
+				return
+			end
+
+			if Minimized then
+				SetMinimized(
+					false
+				)
+			end
+
+			SetOpen(
+				not Opened
+			)
+		end)
+
+	--==================================================
+	-- GARANTIR QUE A BOLINHA FIQUE NA TELA
+	--==================================================
+
+	task.spawn(function()
+		while
+			Gui.Parent
+			and
+			OpenButton.Parent
+		do
+			local AbsolutePosition =
+				OpenButton.AbsolutePosition
+
+			local AbsoluteSize =
+				OpenButton.AbsoluteSize
+
+			local Center =
+				Vector2.new(
+					AbsolutePosition.X
+						+
+						AbsoluteSize.X
+							/
+							2,
+					AbsolutePosition.Y
+						+
+						AbsoluteSize.Y
+							/
+							2
+				)
+
+			local X,
+				Y =
+					ClampBubble(
+						Center.X,
+						Center.Y
+					)
+
+			if
+				math.abs(
+					X
+						-
+						Center.X
+				)
+					>
+					1
+				or
+				math.abs(
+					Y
+						-
+						Center.Y
+				)
+					>
+					1
+			then
+				OpenButton.Position =
+					UDim2.fromOffset(
+						X,
+						Y
+					)
+			end
+
+			task.wait(
+				0.5
+			)
 		end
-	)
+	end)
 
 	--==================================================
 	-- APP
@@ -1435,22 +2049,32 @@ function Interface.Create(
 	App.SetOpen =
 		SetOpen
 
+	App.SetMinimized =
+		SetMinimized
+
 	function App:GetPage(
 		Name
 	)
-
 		local Tab =
-			self.Tabs[Name]
+			self.Tabs[
+				Name
+			]
 
 		if Tab then
-			return Tab.Page
+			return
+				Tab.Page
 		end
 
 		return nil
 	end
 
+	function App:GetCurrentTab()
+		return
+			CurrentTab
+	end
+
 	Debug.Log(
-		"Interface criada."
+		"✅ Interface V4 criada - bolinha arrastável."
 	)
 
 	return App
