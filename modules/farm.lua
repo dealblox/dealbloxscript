@@ -1014,14 +1014,14 @@ function Farm.Create(
 		if
 			not State.Settings.AutoFarm
 		then
-			return nil, nil
+			return false
 		end
 
 		local _, _, root =
 			GetCharacter()
 
 		if not root then
-			return nil, nil
+			return false
 		end
 
 		State:SetRuntime(
@@ -1029,11 +1029,8 @@ function Farm.Create(
 			"Indo para Sub Port 01"
 		)
 
-		--==================================================
-		-- 1. IR PARA O X/Z DO SUB PORT, NÃO PARA A TORRE
-		--==================================================
-
-		local referencePosition =
+		-- Primeiro cruza o oceano no alto.
+		local target =
 			TIKI_SUBMARINE_CFRAME.Position
 
 		local highY =
@@ -1046,9 +1043,9 @@ function Farm.Create(
 
 		local highTarget =
 			CFrame.new(
-				referencePosition.X,
+				target.X,
 				highY,
-				referencePosition.Z
+				target.Z
 			)
 
 		if
@@ -1056,141 +1053,25 @@ function Farm.Create(
 				highTarget
 			)
 		then
-			return nil, nil
+			return false
 		end
 
 		if
 			not State.Settings.AutoFarm
 		then
-			return nil, nil
-		end
-
-		--==================================================
-		-- 2. DESCER SÓ ATÉ UMA ALTURA SEGURA PARA CARREGAR
-		--    O SUB PORT. NÃO DESCEMOS ATÉ A ÁGUA.
-		--==================================================
-
-		State:SetRuntime(
-			"Status",
-			"Carregando Sub Port 01"
-		)
-
-		local loadCFrame =
-			CFrame.new(
-				referencePosition.X,
-				math.max(
-					referencePosition.Y + 95,
-					120
-				),
-				referencePosition.Z
-			)
-
-		if
-			not TweenTo(
-				loadCFrame,
-				LONG_TRAVEL_VERTICAL_SPEED
-			)
-		then
-			return nil, nil
+			return false
 		end
 
 		StopTween()
 
-		task.wait(
-			1.5
-		)
-
-		--==================================================
-		-- 3. PROCURAR O SUBMARINE WORKER DE VERDADE
-		--==================================================
-
+		-- IMPORTANTE:
+		-- Não descemos por Tween. O Sub Port fica abaixo
+		-- da parte alta da Tiki e o Tween estava fazendo
+		-- o personagem tocar a água / zona de retorno.
 		State:SetRuntime(
 			"Status",
-			"Procurando Submarine Worker"
+			"Entrando no Sub Port"
 		)
-
-		local worker,
-			workerPart =
-				WaitForSubmarineWorker()
-
-		-- Segunda tentativa um pouco mais baixa,
-		-- ainda bem acima da água.
-		if
-			not worker
-			or
-			not workerPart
-		then
-			local secondLoad =
-				CFrame.new(
-					referencePosition.X,
-					math.max(
-						referencePosition.Y + 60,
-						85
-					),
-					referencePosition.Z
-				)
-
-			TweenTo(
-				secondLoad,
-				LONG_TRAVEL_VERTICAL_SPEED
-			)
-
-			StopTween()
-
-			task.wait(
-				1.5
-			)
-
-			worker,
-				workerPart =
-					WaitForSubmarineWorker()
-		end
-
-		if
-			not worker
-			or
-			not workerPart
-		then
-			State:SetRuntime(
-				"Status",
-				"Submarine Worker não encontrado"
-			)
-
-			Warning(
-				"Cheguei ao Sub Port 01, mas não encontrei o Submarine Worker."
-			)
-
-			return nil, nil
-		end
-
-		--==================================================
-		-- 4. IR SOMENTE ATÉ O NPC ENCONTRADO
-		--==================================================
-
-		State:SetRuntime(
-			"Status",
-			"Indo até Submarine Worker"
-		)
-
-		local safeWorkerCFrame =
-			workerPart.CFrame
-			*
-			CFrame.new(
-				0,
-				WORKER_SAFE_OFFSET,
-				0
-			)
-
-		if
-			not TweenTo(
-				safeWorkerCFrame,
-				LONG_TRAVEL_VERTICAL_SPEED
-			)
-		then
-			return nil, nil
-		end
-
-		StopTween()
 
 		local _, humanoid,
 			finalRoot =
@@ -1201,7 +1082,7 @@ function Farm.Create(
 			or
 			not finalRoot
 		then
-			return nil, nil
+			return false
 		end
 
 		pcall(function()
@@ -1212,22 +1093,41 @@ function Farm.Create(
 				Vector3.zero
 
 			finalRoot.CFrame =
-				safeWorkerCFrame
+				TIKI_SUBMARINE_CFRAME
 		end)
 
+		-- O fluxo usado por Auto Farms atuais espera
+		-- o local carregar antes de chamar a Remote.
 		task.wait(
-			0.25
+			2
 		)
+
+		local _, checkHumanoid,
+			checkRoot =
+				GetCharacter()
+
+		if
+			not checkHumanoid
+			or
+			not checkRoot
+		then
+			State:SetRuntime(
+				"Status",
+				"Morreu no Sub Port"
+			)
+
+			return false
+		end
 
 		local distance =
 			(
-				finalRoot.Position
+				checkRoot.Position
 				-
-				workerPart.Position
+				TIKI_SUBMARINE_CFRAME.Position
 			).Magnitude
 
 		Log(
-			"Distância do Submarine Worker: "
+			"Distância do Sub Port: "
 			..
 			string.format(
 				"%.1f",
@@ -1237,20 +1137,10 @@ function Farm.Create(
 			" studs"
 		)
 
-		if distance > 20 then
-			State:SetRuntime(
-				"Status",
-				"Falha ao chegar no Worker"
-			)
-
-			Warning(
-				"O Deal Blox encontrou o Submarine Worker, mas não conseguiu ficar perto dele."
-			)
-
-			return nil, nil
-		end
-
-		return worker, workerPart
+		return
+			distance
+			<=
+			80
 	end
 
 	--==================================================
@@ -1305,26 +1195,19 @@ function Farm.Create(
 
 		State:SetRuntime(
 			"Status",
-			"Entrando na Submerged"
+			"Preparando Submerged"
 		)
 
-		local worker,
-			workerPart =
-				MoveToTikiSubmarine()
-
 		if
-			not worker
-			or
-			not workerPart
+			not MoveToTikiSubmarine()
 		then
 			State:SetSetting(
 				"AutoFarm",
 				false
 			)
 
-			State:SetRuntime(
-				"Status",
-				"Entrada da Submerged cancelada"
+			Warning(
+				"Não consegui chegar com segurança ao Sub Port 01."
 			)
 
 			return false
@@ -1335,144 +1218,60 @@ function Farm.Create(
 		then
 			return false
 		end
-
-		--==================================================
-		-- 1. CONVERSAR COM O NPC
-		--==================================================
-
-		local prompt =
-			FindSubmarinePrompt(
-				worker,
-				workerPart
-			)
-
-		if prompt then
-			local promptSuccess =
-				TriggerSubmarinePrompt(
-					prompt
-				)
-
-			if promptSuccess then
-				Log(
-					"Interação com Submarine Worker acionada."
-				)
-			else
-				Warn(
-					"Não consegui disparar o ProximityPrompt do Submarine Worker."
-				)
-			end
-
-			-- Dá tempo para o diálogo abrir/processar.
-			task.wait(
-				0.75
-			)
-		else
-			Warn(
-				"ProximityPrompt do Submarine Worker não encontrado."
-			)
-		end
-
-		if
-			not State.Settings.AutoFarm
-		then
-			return false
-		end
-
-		--==================================================
-		-- 2. TENTAR A VIAGEM UMA ÚNICA VEZ
-		--==================================================
 
 		local Remote =
 			GetSubmarineRemote()
 
 		if not Remote then
+			State:SetRuntime(
+				"Status",
+				"Remote do submarino não encontrada"
+			)
+
 			State:SetSetting(
 				"AutoFarm",
 				false
-			)
-
-			State:SetRuntime(
-				"Status",
-				"Remote do submarino não encontrado"
 			)
 
 			Warning(
-				"Não encontrei o sistema de viagem do Submarine Worker."
+				"A Remote do Submarine Worker não foi encontrada."
 			)
 
 			return false
 		end
-
-		local _, beforeHumanoid,
-			beforeRoot =
-				GetCharacter()
-
-		if
-			not beforeHumanoid
-			or
-			not beforeRoot
-		then
-			State:SetSetting(
-				"AutoFarm",
-				false
-			)
-
-			return false
-		end
-
-		StopTween()
-
-		pcall(function()
-			beforeRoot.AssemblyLinearVelocity =
-				Vector3.zero
-
-			beforeRoot.AssemblyAngularVelocity =
-				Vector3.zero
-
-			-- Mantém o personagem perto do NPC.
-			beforeRoot.CFrame =
-				workerPart.CFrame
-				*
-				CFrame.new(
-					0,
-					WORKER_SAFE_OFFSET,
-					0
-				)
-		end)
 
 		State:SetRuntime(
 			"Status",
-			"Solicitando viagem"
+			"Acionando submarino"
 		)
 
-		local success,
-			result =
-				pcall(function()
-					return Remote:
-						InvokeServer(
-							"TravelToSubmergedIsland"
-						)
-				end)
+		local success, result =
+			pcall(function()
+				return Remote:
+					InvokeServer(
+						"TravelToSubmergedIsland"
+					)
+			end)
 
 		if not success then
 			Warn(
-				"Erro ao solicitar viagem: "
+				"Erro do submarino: "
 				..
 				tostring(result)
 			)
 
+			State:SetRuntime(
+				"Status",
+				"Falha ao acionar submarino"
+			)
+
 			State:SetSetting(
 				"AutoFarm",
 				false
 			)
 
-			State:SetRuntime(
-				"Status",
-				"Falha ao solicitar viagem"
-			)
-
 			Warning(
-				"Não consegui solicitar a viagem para a Submerged."
+				"O submarino não respondeu. Auto Farm desligado."
 			)
 
 			return false
@@ -1480,15 +1279,11 @@ function Farm.Create(
 
 		if result ~= nil then
 			Log(
-				"Resposta da viagem: "
+				"Resposta do submarino: "
 				..
 				tostring(result)
 			)
 		end
-
-		--==================================================
-		-- 3. AGUARDAR SEM REPETIR / SEM IR PARA A ÁGUA
-		--==================================================
 
 		State:SetRuntime(
 			"Status",
@@ -1503,75 +1298,58 @@ function Farm.Create(
 			and
 			tick() - started
 				<
-				SUBMERGED_TRAVEL_TIMEOUT
+				10
 		do
 			if IsInsideSubmerged(
 				QuestData
 			) then
-				Log(
-					"✅ Submerged Island detectada."
-				)
-
 				State:SetRuntime(
 					"Status",
 					"Submerged detectada"
 				)
 
+				Log(
+					"✅ Submerged Island detectada."
+				)
+
 				return true
 			end
 
-			local _, aliveHumanoid,
-				aliveRoot =
-					GetCharacter()
+			local _, aliveHumanoid =
+				GetCharacter()
 
-			if
-				not aliveHumanoid
-				or
-				not aliveRoot
-			then
-				State:SetSetting(
-					"AutoFarm",
-					false
-				)
-
+			if not aliveHumanoid then
 				State:SetRuntime(
 					"Status",
 					"Morreu tentando entrar"
 				)
 
-				Warning(
-					"O personagem morreu durante a tentativa de entrar na Submerged."
+				State:SetSetting(
+					"AutoFarm",
+					false
 				)
 
 				return false
 			end
-
-			-- Impede o loop antigo: enquanto esperamos,
-			-- não damos nenhum novo destino para o personagem.
-			pcall(function()
-				aliveRoot.AssemblyLinearVelocity =
-					Vector3.zero
-			end)
 
 			task.wait(
 				0.20
 			)
 		end
 
-		-- Uma tentativa falhou: para tudo em vez de
-		-- voltar para a água e repetir infinitamente.
+		-- Sem loop infinito: uma tentativa por ativação.
+		State:SetRuntime(
+			"Status",
+			"Submerged não detectada"
+		)
+
 		State:SetSetting(
 			"AutoFarm",
 			false
 		)
 
-		State:SetRuntime(
-			"Status",
-			"Submerged não liberada"
-		)
-
 		Warning(
-			"Não foi possível entrar na Submerged. O Auto Farm foi desligado para evitar loop."
+			"O submarino foi acionado, mas a Submerged não foi detectada. Auto Farm desligado."
 		)
 
 		return false
@@ -1717,6 +1495,405 @@ function Farm.Create(
 	end
 
 	--==================================================
+	-- COMBAT FRAMEWORK
+	--==================================================
+
+	local CombatFrameworkCache =
+		nil
+
+	local RigLibCache =
+		nil
+
+	local function GetCombatFramework()
+		if CombatFrameworkCache then
+			return CombatFrameworkCache
+		end
+
+		local PlayerScripts =
+			Player:
+			FindFirstChild(
+				"PlayerScripts"
+			)
+
+		local Module =
+			PlayerScripts
+			and
+			PlayerScripts:
+				FindFirstChild(
+					"CombatFramework"
+				)
+
+		if not Module then
+			return nil
+		end
+
+		-- Forma 1: módulo já retorna uma tabela
+		-- com activeController.
+		local success, result =
+			pcall(function()
+				return require(
+					Module
+				)
+			end)
+
+		if
+			success
+			and
+			type(result)
+				==
+				"table"
+			and
+			result.activeController
+		then
+			CombatFrameworkCache =
+				result
+
+			return
+				CombatFrameworkCache
+		end
+
+		-- Forma 2: versões do Blox Fruits onde
+		-- activeController está em um upvalue.
+		if
+			success
+			and
+			type(debug)
+				==
+				"table"
+			and
+			type(
+				debug.getupvalues
+			)
+				==
+				"function"
+		then
+			local upSuccess,
+				upvalues =
+					pcall(function()
+						return debug.getupvalues(
+							require(
+								Module
+							)
+						)
+					end)
+
+			if
+				upSuccess
+				and
+				type(upvalues)
+					==
+					"table"
+			then
+				for _, value in pairs(
+					upvalues
+				) do
+					if
+						type(value)
+							==
+							"table"
+						and
+						value.activeController
+					then
+						CombatFrameworkCache =
+							value
+
+						return
+							CombatFrameworkCache
+					end
+				end
+			end
+		end
+
+		return nil
+	end
+
+	local function GetRigLib()
+		if RigLibCache then
+			return RigLibCache
+		end
+
+		local CombatFolder =
+			ReplicatedStorage:
+			FindFirstChild(
+				"CombatFramework"
+			)
+
+		local RigModule =
+			CombatFolder
+			and
+			CombatFolder:
+				FindFirstChild(
+					"RigLib"
+				)
+
+		if not RigModule then
+			return nil
+		end
+
+		local success, result =
+			pcall(function()
+				return require(
+					RigModule
+				)
+			end)
+
+		if success then
+			RigLibCache =
+				result
+		end
+
+		return
+			RigLibCache
+	end
+
+	local function PrepareCombatController()
+		local framework =
+			GetCombatFramework()
+
+		local controller =
+			framework
+			and
+			framework.activeController
+
+		if not controller then
+			return nil
+		end
+
+		pcall(function()
+			controller.increment =
+				3
+
+			controller.timeToNextAttack =
+				0
+
+			controller.timeToNextBlock =
+				0
+
+			controller.focusStart =
+				0
+
+			controller.attacking =
+				false
+
+			controller.blocking =
+				false
+
+			controller.hitboxMagnitude =
+				60
+
+			if controller.humanoid then
+				controller.humanoid.AutoRotate =
+					true
+			end
+		end)
+
+		return controller
+	end
+
+	local function GetBladeName(
+		controller
+	)
+		if
+			not controller
+			or
+			type(controller.blades)
+				~=
+				"table"
+		then
+			return nil
+		end
+
+		local blade =
+			controller.blades[1]
+
+		if not blade then
+			return nil
+		end
+
+		pcall(function()
+			while
+				blade
+				and
+				blade.Parent
+				and
+				blade.Parent
+					~=
+					Player.Character
+			do
+				blade =
+					blade.Parent
+			end
+		end)
+
+		return
+			blade
+			and
+			tostring(blade)
+			or
+			nil
+	end
+
+	local function CombatFrameworkHit(
+		Target
+	)
+		local character, _,
+			playerRoot =
+				GetCharacter()
+
+		if
+			not character
+			or
+			not playerRoot
+			or
+			not Target
+		then
+			return false
+		end
+
+		local controller =
+			PrepareCombatController()
+
+		local attacked =
+			false
+
+		-- Faz o controller executar o ataque normal.
+		if
+			controller
+			and
+			type(controller.attack)
+				==
+				"function"
+		then
+			local success =
+				pcall(function()
+					controller:
+						attack()
+				end)
+
+			if success then
+				attacked =
+					true
+			end
+		end
+
+		-- Registro de hit usado pelo CombatFramework
+		-- atual. Se alguma parte não existir, cai
+		-- silenciosamente para os outros métodos.
+		local RigLib =
+			GetRigLib()
+
+		local RigControllerEvent =
+			ReplicatedStorage:
+			FindFirstChild(
+				"RigControllerEvent"
+			)
+
+		if
+			controller
+			and
+			RigLib
+			and
+			RigControllerEvent
+			and
+			type(
+				RigLib.getBladeHits
+			)
+				==
+				"function"
+		then
+			pcall(function()
+				local rawHits =
+					RigLib.getBladeHits(
+						character,
+						{
+							playerRoot
+						},
+						60
+					)
+
+				local hits =
+					{}
+
+				local seen =
+					{}
+
+				for _, hit in pairs(
+					rawHits
+					or
+					{}
+				) do
+					local model =
+						hit
+						and
+						hit.Parent
+
+					local root =
+						model
+						and
+						model:
+							FindFirstChild(
+								"HumanoidRootPart"
+							)
+
+					local humanoid =
+						model
+						and
+						model:
+							FindFirstChildOfClass(
+								"Humanoid"
+							)
+
+					if
+						root
+						and
+						humanoid
+						and
+						humanoid.Health > 0
+						and
+						not seen[model]
+					then
+						seen[model] =
+							true
+
+						table.insert(
+							hits,
+							root
+						)
+					end
+				end
+
+				if #hits > 0 then
+					local bladeName =
+						GetBladeName(
+							controller
+						)
+
+					if bladeName then
+						RigControllerEvent:
+							FireServer(
+								"weaponChange",
+								bladeName
+							)
+					end
+
+					RigControllerEvent:
+						FireServer(
+							"hit",
+							hits,
+							1,
+							""
+						)
+
+					attacked =
+						true
+				end
+			end)
+		end
+
+		return attacked
+	end
+
+	--==================================================
 	-- AUTO CLICK
 	--==================================================
 
@@ -1749,62 +1926,75 @@ function Farm.Create(
 			return false
 		end
 
-		local enemyRoot =
-			Target
-			and
-			Target:
-				FindFirstChild(
-					"HumanoidRootPart"
-				)
+		-- Dá um instante para a Tool sair da Backpack
+		-- e entrar no Character.
+		task.wait(
+			0.03
+		)
 
-		-- Primeiro tenta a ativação normal da Tool.
-		local activated =
-			pcall(function()
-				tool:Activate()
-			end)
+		local equippedTool =
+			nil
 
-		-- Algumas Tools atuais usam um remote próprio
-		-- para o clique esquerdo.
-		if
-			enemyRoot
-			and
-			tool:
-				FindFirstChild(
-					"LeftClickRemote"
-				)
-		then
-			pcall(function()
-				local direction =
-					(
-						enemyRoot.Position
-						-
-						playerRoot.Position
-					).Unit
+		for _, object in ipairs(
+			character:GetChildren()
+		) do
+			if object:IsA(
+				"Tool"
+			) then
+				equippedTool =
+					object
 
-				tool.LeftClickRemote:
-					FireServer(
-						direction,
-						1
-					)
-			end)
+				break
+			end
 		end
 
-		-- Fallback para executores em que Tool:Activate()
-		-- sozinho não dispara o M1 do Blox Fruits.
+		equippedTool =
+			equippedTool
+			or
+			tool
+
+		local attacked =
+			CombatFrameworkHit(
+				Target
+			)
+
+		-- Ativação normal da Tool para manter a animação
+		-- quando o executor/jogo permitir.
+		pcall(function()
+			equippedTool:
+				Activate()
+		end)
+
+		-- Auto-click compatível com o padrão usado por
+		-- hubs de Blox Fruits.
 		pcall(function()
 			VirtualUser:
 				CaptureController()
 
 			VirtualUser:
-				ClickButton1(
+				Button1Down(
 					Vector2.new(
-						0,
-						0
+						math.huge,
+						math.huge
 					)
 				)
 		end)
 
-		return activated
+		task.wait(
+			0.015
+		)
+
+		pcall(function()
+			VirtualUser:
+				Button1Up(
+					Vector2.new(
+						math.huge,
+						math.huge
+					)
+				)
+		end)
+
+		return attacked
 	end
 
 	--==================================================
@@ -2092,7 +2282,7 @@ function Farm.Create(
 
 		State:SetRuntime(
 			"Status",
-			"Farmando"
+			"Farmando / atacando"
 		)
 
 		State:SetRuntime(
