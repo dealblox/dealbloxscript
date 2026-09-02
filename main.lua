@@ -440,6 +440,11 @@ local success, errorMessage =
 					"data/quests.lua"
 				)
 
+			local ShopData =
+				LoadModule(
+					"data/shop.lua"
+				)
+
 			--==================================================
 			-- UI COMPONENTS
 			--==================================================
@@ -647,6 +652,104 @@ local success, errorMessage =
 			end
 
 			--==================================================
+			-- SHOP ENGINE
+			--==================================================
+
+			local ShopModule,
+				shopModuleError =
+				TryLoadModule(
+					"modules/shop.lua"
+				)
+
+			local ShopEngine =
+				nil
+
+			if ShopModule then
+				local shopCreateSuccess,
+					shopResult =
+					xpcall(
+						function()
+							return ShopModule.Create(
+								ShopData,
+								Debug
+							)
+						end,
+						debug.traceback
+					)
+
+				if shopCreateSuccess then
+					ShopEngine =
+						shopResult
+				else
+					shopModuleError =
+						shopResult
+
+					Warn(
+						shopResult
+					)
+				end
+			end
+
+			--==================================================
+			-- SHOP UI
+			--==================================================
+
+			if ShopEngine then
+				local ShopUI,
+					shopUIError =
+					TryLoadModule(
+						"ui/shop.lua"
+					)
+
+				if ShopUI then
+					local shopUISuccess,
+						shopUICreateError =
+						xpcall(
+							function()
+								ShopUI.Create(
+									App,
+									Config,
+									Debug,
+									ShopEngine
+								)
+							end,
+							debug.traceback
+						)
+
+					if not shopUISuccess then
+						Warn(
+							shopUICreateError
+						)
+
+						ShowPageError(
+							App,
+							"Loja",
+							"❌ ERRO NA ABA LOJA",
+							shopUICreateError
+						)
+					end
+				else
+					ShowPageError(
+						App,
+						"Loja",
+						"❌ LOJA NÃO CARREGOU",
+						shopUIError
+							or
+							"ui/shop.lua não carregou."
+					)
+				end
+			else
+				ShowPageError(
+					App,
+					"Loja",
+					"❌ SHOP ENGINE NÃO CARREGOU",
+					shopModuleError
+						or
+						"modules/shop.lua não carregou."
+				)
+			end
+
+			--==================================================
 			-- ESP ENGINE
 			--==================================================
 
@@ -777,6 +880,9 @@ local success, errorMessage =
 
 				ESP =
 					ESPEngine,
+
+				Shop =
+					ShopEngine,
 
 				Modules =
 					LoadedModules
