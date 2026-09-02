@@ -1495,247 +1495,129 @@ function Farm.Create(
 	end
 
 	--==================================================
-	-- COMBAT FRAMEWORK
+	-- FAST ATTACK / NET
 	--==================================================
 
-	local CombatFrameworkCache =
+	local RegisterAttackCache =
 		nil
 
-	local RigLibCache =
+	local RegisterHitCache =
 		nil
 
-	local function GetCombatFramework()
-		if CombatFrameworkCache then
-			return CombatFrameworkCache
-		end
-
-		local PlayerScripts =
-			Player:
-			FindFirstChild(
-				"PlayerScripts"
-			)
-
-		local Module =
-			PlayerScripts
-			and
-			PlayerScripts:
-				FindFirstChild(
-					"CombatFramework"
-				)
-
-		if not Module then
-			return nil
-		end
-
-		-- Forma 1: módulo já retorna uma tabela
-		-- com activeController.
-		local success, result =
-			pcall(function()
-				return require(
-					Module
-				)
-			end)
-
+	local function GetFastAttackRemotes()
 		if
-			success
+			RegisterAttackCache
 			and
-			type(result)
-				==
-				"table"
+			RegisterHitCache
 			and
-			result.activeController
+			RegisterAttackCache.Parent
+			and
+			RegisterHitCache.Parent
 		then
-			CombatFrameworkCache =
-				result
-
 			return
-				CombatFrameworkCache
+				RegisterAttackCache,
+				RegisterHitCache
 		end
 
-		-- Forma 2: versões do Blox Fruits onde
-		-- activeController está em um upvalue.
-		if
-			success
-			and
-			type(debug)
-				==
-				"table"
-			and
-			type(
-				debug.getupvalues
-			)
-				==
-				"function"
-		then
-			local upSuccess,
-				upvalues =
-					pcall(function()
-						return debug.getupvalues(
-							require(
-								Module
-							)
-						)
-					end)
-
-			if
-				upSuccess
-				and
-				type(upvalues)
-					==
-					"table"
-			then
-				for _, value in pairs(
-					upvalues
-				) do
-					if
-						type(value)
-							==
-							"table"
-						and
-						value.activeController
-					then
-						CombatFrameworkCache =
-							value
-
-						return
-							CombatFrameworkCache
-					end
-				end
-			end
-		end
-
-		return nil
-	end
-
-	local function GetRigLib()
-		if RigLibCache then
-			return RigLibCache
-		end
-
-		local CombatFolder =
+		local Modules =
 			ReplicatedStorage:
 			FindFirstChild(
-				"CombatFramework"
+				"Modules"
 			)
 
-		local RigModule =
-			CombatFolder
+		local Net =
+			Modules
 			and
-			CombatFolder:
+			Modules:
 				FindFirstChild(
-					"RigLib"
+					"Net"
 				)
 
-		if not RigModule then
-			return nil
+		if not Net then
+			return nil, nil
 		end
 
-		local success, result =
-			pcall(function()
-				return require(
-					RigModule
+		RegisterAttackCache =
+			Net:
+				FindFirstChild(
+					"RE/RegisterAttack"
 				)
-			end)
 
-		if success then
-			RigLibCache =
-				result
-		end
-
-		return
-			RigLibCache
-	end
-
-	local function PrepareCombatController()
-		local framework =
-			GetCombatFramework()
-
-		local controller =
-			framework
-			and
-			framework.activeController
-
-		if not controller then
-			return nil
-		end
-
-		pcall(function()
-			controller.increment =
-				3
-
-			controller.timeToNextAttack =
-				0
-
-			controller.timeToNextBlock =
-				0
-
-			controller.focusStart =
-				0
-
-			controller.attacking =
-				false
-
-			controller.blocking =
-				false
-
-			controller.hitboxMagnitude =
-				60
-
-			if controller.humanoid then
-				controller.humanoid.AutoRotate =
-					true
-			end
-		end)
-
-		return controller
-	end
-
-	local function GetBladeName(
-		controller
-	)
-		if
-			not controller
-			or
-			type(controller.blades)
-				~=
-				"table"
-		then
-			return nil
-		end
-
-		local blade =
-			controller.blades[1]
-
-		if not blade then
-			return nil
-		end
-
-		pcall(function()
-			while
-				blade
-				and
-				blade.Parent
-				and
-				blade.Parent
-					~=
-					Player.Character
-			do
-				blade =
-					blade.Parent
-			end
-		end)
+		RegisterHitCache =
+			Net:
+				FindFirstChild(
+					"RE/RegisterHit"
+				)
 
 		return
-			blade
-			and
-			tostring(blade)
-			or
-			nil
+			RegisterAttackCache,
+			RegisterHitCache
 	end
 
-	local function CombatFrameworkHit(
+	local function GetEnemyHitPart(
 		Target
 	)
+		if not Target then
+			return nil
+		end
+
+		return
+			Target:
+				FindFirstChild(
+					"Head"
+				)
+			or
+			Target:
+				FindFirstChild(
+					"HumanoidRootPart"
+				)
+			or
+			Target:
+				FindFirstChildWhichIsA(
+					"BasePart"
+				)
+	end
+
+	local function NetAttack(
+		Target
+	)
+		if
+			not Target
+			or
+			not Target.Parent
+		then
+			return false
+		end
+
+		local humanoid =
+			Target:
+				FindFirstChildOfClass(
+					"Humanoid"
+				)
+
+		local enemyRoot =
+			Target:
+				FindFirstChild(
+					"HumanoidRootPart"
+				)
+
+		local hitPart =
+			GetEnemyHitPart(
+				Target
+			)
+
+		if
+			not humanoid
+			or
+			humanoid.Health <= 0
+			or
+			not enemyRoot
+			or
+			not hitPart
+		then
+			return false
+		end
+
 		local character, _,
 			playerRoot =
 				GetCharacter()
@@ -1744,153 +1626,101 @@ function Farm.Create(
 			not character
 			or
 			not playerRoot
-			or
-			not Target
 		then
 			return false
 		end
 
-		local controller =
-			PrepareCombatController()
+		local equippedTool =
+			character:
+				FindFirstChildOfClass(
+					"Tool"
+				)
 
-		local attacked =
-			false
+		if not equippedTool then
+			return false
+		end
 
-		-- Faz o controller executar o ataque normal.
+		-- Algumas armas/frutas possuem a própria
+		-- LeftClickRemote. Quando existir usamos ela.
+		local leftClick =
+			equippedTool:
+				FindFirstChild(
+					"LeftClickRemote"
+				)
+
 		if
-			controller
+			leftClick
 			and
-			type(controller.attack)
-				==
-				"function"
+			leftClick:IsA(
+				"RemoteEvent"
+			)
 		then
+			local direction =
+				enemyRoot.Position
+				-
+				playerRoot.Position
+
+			if direction.Magnitude > 0 then
+				direction =
+					direction.Unit
+			else
+				direction =
+					Vector3.new(
+						0,
+						0,
+						-1
+					)
+			end
+
 			local success =
 				pcall(function()
-					controller:
-						attack()
+					leftClick:
+						FireServer(
+							direction,
+							1
+						)
 				end)
 
-			if success then
-				attacked =
-					true
-			end
+			return success
 		end
 
-		-- Registro de hit usado pelo CombatFramework
-		-- atual. Se alguma parte não existir, cai
-		-- silenciosamente para os outros métodos.
-		local RigLib =
-			GetRigLib()
-
-		local RigControllerEvent =
-			ReplicatedStorage:
-			FindFirstChild(
-				"RigControllerEvent"
-			)
+		local RegisterAttack,
+			RegisterHit =
+				GetFastAttackRemotes()
 
 		if
-			controller
-			and
-			RigLib
-			and
-			RigControllerEvent
-			and
-			type(
-				RigLib.getBladeHits
-			)
-				==
-				"function"
+			not RegisterAttack
+			or
+			not RegisterHit
 		then
-			pcall(function()
-				local rawHits =
-					RigLib.getBladeHits(
-						character,
-						{
-							playerRoot
-						},
-						60
-					)
-
-				local hits =
-					{}
-
-				local seen =
-					{}
-
-				for _, hit in pairs(
-					rawHits
-					or
-					{}
-				) do
-					local model =
-						hit
-						and
-						hit.Parent
-
-					local root =
-						model
-						and
-						model:
-							FindFirstChild(
-								"HumanoidRootPart"
-							)
-
-					local humanoid =
-						model
-						and
-						model:
-							FindFirstChildOfClass(
-								"Humanoid"
-							)
-
-					if
-						root
-						and
-						humanoid
-						and
-						humanoid.Health > 0
-						and
-						not seen[model]
-					then
-						seen[model] =
-							true
-
-						table.insert(
-							hits,
-							root
-						)
-					end
-				end
-
-				if #hits > 0 then
-					local bladeName =
-						GetBladeName(
-							controller
-						)
-
-					if bladeName then
-						RigControllerEvent:
-							FireServer(
-								"weaponChange",
-								bladeName
-							)
-					end
-
-					RigControllerEvent:
-						FireServer(
-							"hit",
-							hits,
-							1,
-							""
-						)
-
-					attacked =
-						true
-				end
-			end)
+			return false
 		end
 
-		return attacked
+		local hitList = {
+			{
+				Target,
+				hitPart
+			}
+		}
+
+		local success =
+			pcall(function()
+
+				RegisterAttack:
+					FireServer(
+						State.Settings.AttackDelay
+							or
+							0
+					)
+
+				RegisterHit:
+					FireServer(
+						hitPart,
+						hitList
+					)
+			end)
+
+		return success
 	end
 
 	--==================================================
@@ -1926,47 +1756,32 @@ function Farm.Create(
 			return false
 		end
 
-		-- Dá um instante para a Tool sair da Backpack
-		-- e entrar no Character.
+		-- Dá tempo para a arma sair da Backpack.
 		task.wait(
-			0.03
+			0.025
 		)
 
 		local equippedTool =
-			nil
-
-		for _, object in ipairs(
-			character:GetChildren()
-		) do
-			if object:IsA(
-				"Tool"
-			) then
-				equippedTool =
-					object
-
-				break
-			end
-		end
-
-		equippedTool =
-			equippedTool
+			character:
+				FindFirstChildOfClass(
+					"Tool"
+				)
 			or
 			tool
 
-		local attacked =
-			CombatFrameworkHit(
+		-- 1. Sistema de hit atual.
+		local registered =
+			NetAttack(
 				Target
 			)
 
-		-- Ativação normal da Tool para manter a animação
-		-- quando o executor/jogo permitir.
+		-- 2. Mantém animação/ativação da Tool.
 		pcall(function()
 			equippedTool:
 				Activate()
 		end)
 
-		-- Auto-click compatível com o padrão usado por
-		-- hubs de Blox Fruits.
+		-- 3. Clique virtual como fallback visual.
 		pcall(function()
 			VirtualUser:
 				CaptureController()
@@ -1974,27 +1789,25 @@ function Farm.Create(
 			VirtualUser:
 				Button1Down(
 					Vector2.new(
-						math.huge,
-						math.huge
+						1280,
+						672
 					)
 				)
-		end)
 
-		task.wait(
-			0.015
-		)
+			task.wait(
+				0.01
+			)
 
-		pcall(function()
 			VirtualUser:
 				Button1Up(
 					Vector2.new(
-						math.huge,
-						math.huge
+						1280,
+						672
 					)
 				)
 		end)
 
-		return attacked
+		return registered
 	end
 
 	--==================================================
@@ -2293,6 +2106,9 @@ function Farm.Create(
 		ActivateBuso()
 		EquipAttack()
 
+		local FailedAttackCount =
+			0
+
 		while
 			State.Settings.AutoFarm
 			and
@@ -2399,9 +2215,29 @@ function Farm.Create(
 
 			ActivateBuso()
 			EquipAttack()
-			Attack(
-				Target
-			)
+			local attackRegistered =
+				Attack(
+					Target
+				)
+
+			if attackRegistered then
+				FailedAttackCount =
+					0
+			else
+				FailedAttackCount +=
+					1
+
+				if
+					FailedAttackCount
+					>=
+					10
+				then
+					State:SetRuntime(
+						"Status",
+						"Falha ao registrar ataque"
+					)
+				end
+			end
 
 			task.wait(
 				State.Settings.AttackDelay
