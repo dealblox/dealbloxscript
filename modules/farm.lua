@@ -39,6 +39,9 @@ function Farm.Create(
 	local GuiService =
 		game:GetService("GuiService")
 
+	local CoreGui =
+		game:GetService("CoreGui")
+
 	local StarterGui =
 		game:GetService("StarterGui")
 
@@ -1736,73 +1739,182 @@ function Farm.Create(
 	-- PROTEÇÃO DA INTERFACE
 	--==================================================
 
-	local function IsDealBloxGuiObject(
-		object
-	)
-		local current =
-			object
-
-		while current do
-			if
-				current:IsA(
-					"ScreenGui"
-				)
-				and
-				current.Name
-					==
+	local function GetDealBloxGui()
+		local gui =
+			CoreGui:
+				FindFirstChild(
 					"DealBlox"
-			then
-				return true
-			end
+				)
 
-			current =
-				current.Parent
+		if gui then
+			return gui
 		end
 
-		return false
+		local PlayerGui =
+			Player:
+				FindFirstChild(
+					"PlayerGui"
+				)
+
+		return
+			PlayerGui
+			and
+			PlayerGui:
+				FindFirstChild(
+					"DealBlox"
+				)
+			or
+			nil
 	end
 
-	local function IsMouseOverDealBlox()
-		local mousePosition =
-			UserInputService:
-				GetMouseLocation()
-
-		local success, guiObjects =
-			pcall(function()
-				return GuiService:
-					GetGuiObjectsAtPosition(
-						math.floor(
-							mousePosition.X
-						),
-						math.floor(
-							mousePosition.Y
-						)
-					)
-			end)
-
+	local function IsPointInsideGui(
+		point,
+		guiObject
+	)
 		if
-			not success
+			not guiObject
 			or
-			type(guiObjects)
-				~=
-				"table"
+			not guiObject:IsA(
+				"GuiObject"
+			)
+			or
+			not guiObject.Visible
 		then
 			return false
 		end
 
-		for _, object in ipairs(
-			guiObjects
+		local position =
+			guiObject.AbsolutePosition
+
+		local size =
+			guiObject.AbsoluteSize
+
+		return
+			point.X
+				>=
+				position.X
+			and
+			point.X
+				<=
+				position.X
+					+
+					size.X
+			and
+			point.Y
+				>=
+				position.Y
+			and
+			point.Y
+				<=
+				position.Y
+					+
+					size.Y
+	end
+
+	local function GetSafeClickPosition()
+		local camera =
+			workspace.CurrentCamera
+
+		local viewport =
+			camera
+			and
+			camera.ViewportSize
+			or
+			Vector2.new(
+				1280,
+				720
+			)
+
+		local gui =
+			GetDealBloxGui()
+
+		local main =
+			gui
+			and
+			gui:
+				FindFirstChild(
+					"Main"
+				)
+
+		local openButton =
+			gui
+			and
+			gui:
+				FindFirstChild(
+					"OpenButton"
+				)
+
+		-- Pontos candidatos nas bordas da tela.
+		-- Evitamos o centro porque o painel DEAL BLOX
+		-- ocupa justamente essa região.
+		local candidates = {
+			Vector2.new(
+				math.max(
+					viewport.X - 8,
+					1
+				),
+				math.floor(
+					viewport.Y * 0.50
+				)
+			),
+
+			Vector2.new(
+				math.max(
+					viewport.X - 8,
+					1
+				),
+				math.floor(
+					viewport.Y * 0.68
+				)
+			),
+
+			Vector2.new(
+				math.max(
+					viewport.X - 8,
+					1
+				),
+				math.floor(
+					viewport.Y * 0.32
+				)
+			),
+
+			Vector2.new(
+				8,
+				math.floor(
+					viewport.Y * 0.75
+				)
+			)
+		}
+
+		for _, point in ipairs(
+			candidates
 		) do
 			if
-				IsDealBloxGuiObject(
-					object
+				not IsPointInsideGui(
+					point,
+					main
+				)
+				and
+				not IsPointInsideGui(
+					point,
+					openButton
 				)
 			then
-				return true
+				return point
 			end
 		end
 
-		return false
+		-- Fallback extremo na lateral direita.
+		return
+			Vector2.new(
+				math.max(
+					viewport.X - 2,
+					1
+				),
+				math.floor(
+					viewport.Y / 2
+				)
+			)
 	end
 
 	--==================================================
@@ -1862,94 +1974,28 @@ function Farm.Create(
 	end
 
 	local function ClickWithExecutor()
-		local clicked =
-			false
-
-		local mouse1clickFn =
-			GetExecutorFunction(
-				"mouse1click"
-			)
-
-		if mouse1clickFn then
-			local success =
-				pcall(
-					mouse1clickFn
-				)
-
-			if success then
-				clicked =
-					true
-			end
-		end
-
-		if not clicked then
-			local mouse1pressFn =
-				GetExecutorFunction(
-					"mouse1press"
-				)
-
-			local mouse1releaseFn =
-				GetExecutorFunction(
-					"mouse1release"
-				)
-
-			if
-				mouse1pressFn
-				and
-				mouse1releaseFn
-			then
-				local success =
-					pcall(function()
-						mouse1pressFn()
-
-						task.wait(
-							0.015
-						)
-
-						mouse1releaseFn()
-					end)
-
-				if success then
-					clicked =
-						true
-				end
-			end
-		end
-
-		return clicked
+		-- DESATIVADO no V10.
+		--
+		-- mouse1click/mouse1press usam a posição REAL
+		-- do cursor e por isso clicavam no painel.
+		-- Mantemos esta função apenas para compatibilidade.
+		return false
 	end
 
 	local function ClickWithVirtualInput()
-		local camera =
-			workspace.CurrentCamera
-
-		local x =
-			640
-
-		local y =
-			360
-
-		if camera then
-			local viewport =
-				camera.ViewportSize
-
-			x =
-				math.floor(
-					viewport.X / 2
-				)
-
-			y =
-				math.floor(
-					viewport.Y / 2
-				)
-		end
+		local point =
+			GetSafeClickPosition()
 
 		local success =
 			pcall(function()
 				VirtualInputManager:
 					SendMouseButtonEvent(
-						x,
-						y,
+						math.floor(
+							point.X
+						),
+						math.floor(
+							point.Y
+						),
 						0,
 						true,
 						game,
@@ -1962,8 +2008,12 @@ function Farm.Create(
 
 				VirtualInputManager:
 					SendMouseButtonEvent(
-						x,
-						y,
+						math.floor(
+							point.X
+						),
+						math.floor(
+							point.Y
+						),
 						0,
 						false,
 						game,
@@ -1979,26 +2029,7 @@ function Farm.Create(
 			workspace.CurrentCamera
 
 		local position =
-			Vector2.new(
-				640,
-				360
-			)
-
-		if camera then
-			position =
-				Vector2.new(
-					math.floor(
-						camera.ViewportSize.X
-							/
-							2
-					),
-					math.floor(
-						camera.ViewportSize.Y
-							/
-							2
-					)
-				)
-		end
+			GetSafeClickPosition()
 
 		local success =
 			pcall(function()
@@ -2124,8 +2155,7 @@ function Farm.Create(
 		local worked =
 			false
 
-		-- O registro de ataque/hit não usa o cursor,
-		-- então pode continuar mesmo com o painel aberto.
+		-- 1. Sistema de hit do jogo.
 		if
 			NetAttack(
 				Target
@@ -2135,8 +2165,7 @@ function Farm.Create(
 				true
 		end
 
-		-- Tool:Activate também não precisa roubar
-		-- o cursor do painel.
+		-- 2. Ativação da Tool.
 		if
 			FireToolActivated(
 				equippedTool
@@ -2146,41 +2175,20 @@ function Farm.Create(
 				true
 		end
 
-		--==================================================
-		-- PROTEGER O PAINEL
-		--==================================================
-		--
-		-- Enquanto o cursor estiver em cima da interface
-		-- DEAL BLOX, NÃO enviamos mouse1click,
-		-- VirtualInputManager ou VirtualUser.
-		--
-		-- Assim o usuário consegue:
-		--   • trocar abas;
-		--   • clicar em botões;
-		--   • usar scroll;
-		--   • mexer nas configurações.
-		--
-		-- Quando o cursor sai do painel, o auto-click
-		-- físico volta automaticamente.
-		--==================================================
+		-- 3. NÃO usamos mais mouse1click do executor.
+		-- Ele usa o cursor real e atrapalha a interface.
 
-		if
-			not IsMouseOverDealBlox()
-		then
-			if ClickWithExecutor() then
-				worked =
-					true
-			end
+		-- 4. Clique virtual em uma coordenada segura
+		-- fora do painel.
+		if ClickWithVirtualInput() then
+			worked =
+				true
+		end
 
-			if ClickWithVirtualInput() then
-				worked =
-					true
-			end
-
-			if ClickWithVirtualUser() then
-				worked =
-					true
-			end
+		-- 5. Segundo fallback, também fora do painel.
+		if ClickWithVirtualUser() then
+			worked =
+				true
 		end
 
 		return worked
