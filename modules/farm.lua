@@ -30,6 +30,9 @@ function Farm.Create(
 	local VirtualUser =
 		game:GetService("VirtualUser")
 
+	local VirtualInputManager =
+		game:GetService("VirtualInputManager")
+
 	local StarterGui =
 		game:GetService("StarterGui")
 
@@ -1724,6 +1727,277 @@ function Farm.Create(
 	end
 
 	--==================================================
+	-- INPUT / AUTO CLICK
+	--==================================================
+
+	local function GetExecutorFunction(
+		name
+	)
+		local environments = {}
+
+		pcall(function()
+			table.insert(
+				environments,
+				getgenv()
+			)
+		end)
+
+		pcall(function()
+			table.insert(
+				environments,
+				getrenv()
+			)
+		end)
+
+		table.insert(
+			environments,
+			_G
+		)
+
+		for _, env in ipairs(
+			environments
+		) do
+			if
+				type(env)
+					==
+					"table"
+				and
+				type(
+					rawget(
+						env,
+						name
+					)
+				)
+					==
+					"function"
+			then
+				return
+					rawget(
+						env,
+						name
+					)
+			end
+		end
+
+		return nil
+	end
+
+	local function ClickWithExecutor()
+		local clicked =
+			false
+
+		local mouse1clickFn =
+			GetExecutorFunction(
+				"mouse1click"
+			)
+
+		if mouse1clickFn then
+			local success =
+				pcall(
+					mouse1clickFn
+				)
+
+			if success then
+				clicked =
+					true
+			end
+		end
+
+		if not clicked then
+			local mouse1pressFn =
+				GetExecutorFunction(
+					"mouse1press"
+				)
+
+			local mouse1releaseFn =
+				GetExecutorFunction(
+					"mouse1release"
+				)
+
+			if
+				mouse1pressFn
+				and
+				mouse1releaseFn
+			then
+				local success =
+					pcall(function()
+						mouse1pressFn()
+
+						task.wait(
+							0.015
+						)
+
+						mouse1releaseFn()
+					end)
+
+				if success then
+					clicked =
+						true
+				end
+			end
+		end
+
+		return clicked
+	end
+
+	local function ClickWithVirtualInput()
+		local camera =
+			workspace.CurrentCamera
+
+		local x =
+			640
+
+		local y =
+			360
+
+		if camera then
+			local viewport =
+				camera.ViewportSize
+
+			x =
+				math.floor(
+					viewport.X / 2
+				)
+
+			y =
+				math.floor(
+					viewport.Y / 2
+				)
+		end
+
+		local success =
+			pcall(function()
+				VirtualInputManager:
+					SendMouseButtonEvent(
+						x,
+						y,
+						0,
+						true,
+						game,
+						0
+					)
+
+				task.wait(
+					0.015
+				)
+
+				VirtualInputManager:
+					SendMouseButtonEvent(
+						x,
+						y,
+						0,
+						false,
+						game,
+						0
+					)
+			end)
+
+		return success
+	end
+
+	local function ClickWithVirtualUser()
+		local camera =
+			workspace.CurrentCamera
+
+		local position =
+			Vector2.new(
+				640,
+				360
+			)
+
+		if camera then
+			position =
+				Vector2.new(
+					math.floor(
+						camera.ViewportSize.X
+							/
+							2
+					),
+					math.floor(
+						camera.ViewportSize.Y
+							/
+							2
+					)
+				)
+		end
+
+		local success =
+			pcall(function()
+				VirtualUser:
+					CaptureController()
+
+				VirtualUser:
+					Button1Down(
+						position,
+						camera
+							and
+							camera.CFrame
+							or
+							CFrame.new()
+					)
+
+				task.wait(
+					0.015
+				)
+
+				VirtualUser:
+					Button1Up(
+						position,
+						camera
+							and
+							camera.CFrame
+							or
+							CFrame.new()
+					)
+			end)
+
+		return success
+	end
+
+	local function FireToolActivated(
+		tool
+	)
+		if not tool then
+			return false
+		end
+
+		local worked =
+			false
+
+		local success =
+			pcall(function()
+				tool:
+					Activate()
+			end)
+
+		if success then
+			worked =
+				true
+		end
+
+		local fireSignal =
+			GetExecutorFunction(
+				"firesignal"
+			)
+
+		if fireSignal then
+			local signalSuccess =
+				pcall(function()
+					fireSignal(
+						tool.Activated
+					)
+				end)
+
+			if signalSuccess then
+				worked =
+					true
+			end
+		end
+
+		return worked
+	end
+
+	--==================================================
 	-- AUTO CLICK
 	--==================================================
 
@@ -1756,9 +2030,8 @@ function Farm.Create(
 			return false
 		end
 
-		-- Dá tempo para a arma sair da Backpack.
 		task.wait(
-			0.025
+			0.03
 		)
 
 		local equippedTool =
@@ -1769,45 +2042,48 @@ function Farm.Create(
 			or
 			tool
 
-		-- 1. Sistema de hit atual.
-		local registered =
+		local worked =
+			false
+
+		-- 1. Remote de hit do próprio jogo.
+		if
 			NetAttack(
 				Target
 			)
+		then
+			worked =
+				true
+		end
 
-		-- 2. Mantém animação/ativação da Tool.
-		pcall(function()
-			equippedTool:
-				Activate()
-		end)
-
-		-- 3. Clique virtual como fallback visual.
-		pcall(function()
-			VirtualUser:
-				CaptureController()
-
-			VirtualUser:
-				Button1Down(
-					Vector2.new(
-						1280,
-						672
-					)
-				)
-
-			task.wait(
-				0.01
+		-- 2. Ativação da Tool / Activated.
+		if
+			FireToolActivated(
+				equippedTool
 			)
+		then
+			worked =
+				true
+		end
 
-			VirtualUser:
-				Button1Up(
-					Vector2.new(
-						1280,
-						672
-					)
-				)
-		end)
+		-- 3. Funções de clique fornecidas pelo executor.
+		if ClickWithExecutor() then
+			worked =
+				true
+		end
 
-		return registered
+		-- 4. VirtualInputManager.
+		if ClickWithVirtualInput() then
+			worked =
+				true
+		end
+
+		-- 5. VirtualUser como último fallback.
+		if ClickWithVirtualUser() then
+			worked =
+				true
+		end
+
+		return worked
 	end
 
 	--==================================================
@@ -2106,7 +2382,10 @@ function Farm.Create(
 		ActivateBuso()
 		EquipAttack()
 
-		local FailedAttackCount =
+		local lastHealth =
+			humanoid.Health
+
+		local noDamageCycles =
 			0
 
 		while
@@ -2127,8 +2406,12 @@ function Farm.Create(
 					"Aguardando respawn"
 				)
 
-				task.wait(1)
-				continue
+				StopTween()
+
+				-- Sai desta luta. O loop principal
+				-- vai pegar missão/alvo de novo após
+				-- o personagem renascer.
+				return
 			end
 
 			if not enemyRoot.Parent then
@@ -2143,7 +2426,7 @@ function Farm.Create(
 					State.Settings.FarmHeight
 				)
 				or
-				8
+				10
 
 			local attackType =
 				State.Settings.AttackType
@@ -2153,8 +2436,6 @@ function Farm.Create(
 			local height =
 				configuredHeight
 
-			-- O antigo padrão de 24 studs deixava o
-			-- personagem fora do alcance do M1.
 			if
 				attackType
 					==
@@ -2167,36 +2448,36 @@ function Farm.Create(
 				height =
 					math.clamp(
 						configuredHeight,
-						5,
-						8
+						8,
+						11
 					)
 			else
 				height =
 					math.clamp(
 						configuredHeight,
-						5,
-						12
+						8,
+						14
 					)
 			end
 
-			-- Na Submerged continuamos baixos para
-			-- evitar sair da área e manter alcance.
 			if QuestData.RequiresSubmerged then
 				height =
 					math.clamp(
 						height,
-						5,
-						9
+						9,
+						12
 					)
 			end
 
-			local above =
-				enemyPosition
-				+
-				Vector3.new(
+			-- Fica acima e um pouco atrás do NPC,
+			-- reduzindo a chance de tomar golpe frontal.
+			local attackCFrame =
+				enemyRoot.CFrame
+				*
+				CFrame.new(
 					0,
 					height,
-					0
+					4
 				)
 
 			pcall(function()
@@ -2208,42 +2489,55 @@ function Farm.Create(
 
 				playerRoot.CFrame =
 					CFrame.new(
-						above,
+						attackCFrame.Position,
 						enemyPosition
 					)
 			end)
 
 			ActivateBuso()
 			EquipAttack()
-			local attackRegistered =
-				Attack(
-					Target
-				)
 
-			if attackRegistered then
-				FailedAttackCount =
+			Attack(
+				Target
+			)
+
+			task.wait(
+				math.max(
+					tonumber(
+						State.Settings.AttackDelay
+					)
+					or
+					0.10,
+					0.05
+				)
+			)
+
+			if
+				humanoid.Health
+				<
+				lastHealth
+			then
+				noDamageCycles =
 					0
+
+				State:SetRuntime(
+					"Status",
+					"Farmando / dando dano"
+				)
 			else
-				FailedAttackCount +=
+				noDamageCycles +=
 					1
 
-				if
-					FailedAttackCount
-					>=
-					10
-				then
+				if noDamageCycles >= 20 then
 					State:SetRuntime(
 						"Status",
-						"Falha ao registrar ataque"
+						"Atacando, mas sem dano"
 					)
 				end
 			end
 
-			task.wait(
-				State.Settings.AttackDelay
-					or
-					0.10
-			)
+			lastHealth =
+				humanoid.Health
 		end
 
 		State:SetRuntime(
@@ -2257,6 +2551,32 @@ function Farm.Create(
 	--==================================================
 
 	local function Step()
+		local character,
+			humanoid,
+			root =
+				GetCharacter()
+
+		if
+			not character
+			or
+			not humanoid
+			or
+			not root
+		then
+			State:SetRuntime(
+				"Status",
+				"Aguardando respawn"
+			)
+
+			StopTween()
+
+			task.wait(
+				0.75
+			)
+
+			return
+		end
+
 		local level =
 			GetLevel()
 
@@ -2508,6 +2828,69 @@ function Farm.Create(
 					object.CanCollide =
 						false
 				end
+			end
+		end)
+
+	--==================================================
+	-- RESPAWN
+	--==================================================
+
+	Player.CharacterAdded:
+		Connect(function(
+			character
+		)
+			if
+				Environment.DealBloxFarmToken
+				~=
+				Token
+			then
+				return
+			end
+
+			StopTween()
+
+			if
+				State.Settings.AutoFarm
+			then
+				State:SetRuntime(
+					"Status",
+					"Respawn detectado"
+				)
+
+				task.spawn(function()
+					local humanoid =
+						character:
+							WaitForChild(
+								"Humanoid",
+								10
+							)
+
+					local root =
+						character:
+							WaitForChild(
+								"HumanoidRootPart",
+								10
+							)
+
+					if
+						humanoid
+						and
+						root
+					then
+						task.wait(
+							1.5
+						)
+
+						if
+							State.Settings.AutoFarm
+						then
+							State:SetRuntime(
+								"Status",
+								"Retomando Auto Farm"
+							)
+						end
+					end
+				end)
 			end
 		end)
 
