@@ -33,6 +33,12 @@ function Farm.Create(
 	local VirtualInputManager =
 		game:GetService("VirtualInputManager")
 
+	local UserInputService =
+		game:GetService("UserInputService")
+
+	local GuiService =
+		game:GetService("GuiService")
+
 	local StarterGui =
 		game:GetService("StarterGui")
 
@@ -1727,6 +1733,79 @@ function Farm.Create(
 	end
 
 	--==================================================
+	-- PROTEÇÃO DA INTERFACE
+	--==================================================
+
+	local function IsDealBloxGuiObject(
+		object
+	)
+		local current =
+			object
+
+		while current do
+			if
+				current:IsA(
+					"ScreenGui"
+				)
+				and
+				current.Name
+					==
+					"DealBlox"
+			then
+				return true
+			end
+
+			current =
+				current.Parent
+		end
+
+		return false
+	end
+
+	local function IsMouseOverDealBlox()
+		local mousePosition =
+			UserInputService:
+				GetMouseLocation()
+
+		local success, guiObjects =
+			pcall(function()
+				return GuiService:
+					GetGuiObjectsAtPosition(
+						math.floor(
+							mousePosition.X
+						),
+						math.floor(
+							mousePosition.Y
+						)
+					)
+			end)
+
+		if
+			not success
+			or
+			type(guiObjects)
+				~=
+				"table"
+		then
+			return false
+		end
+
+		for _, object in ipairs(
+			guiObjects
+		) do
+			if
+				IsDealBloxGuiObject(
+					object
+				)
+			then
+				return true
+			end
+		end
+
+		return false
+	end
+
+	--==================================================
 	-- INPUT / AUTO CLICK
 	--==================================================
 
@@ -2045,7 +2124,8 @@ function Farm.Create(
 		local worked =
 			false
 
-		-- 1. Remote de hit do próprio jogo.
+		-- O registro de ataque/hit não usa o cursor,
+		-- então pode continuar mesmo com o painel aberto.
 		if
 			NetAttack(
 				Target
@@ -2055,7 +2135,8 @@ function Farm.Create(
 				true
 		end
 
-		-- 2. Ativação da Tool / Activated.
+		-- Tool:Activate também não precisa roubar
+		-- o cursor do painel.
 		if
 			FireToolActivated(
 				equippedTool
@@ -2065,22 +2146,41 @@ function Farm.Create(
 				true
 		end
 
-		-- 3. Funções de clique fornecidas pelo executor.
-		if ClickWithExecutor() then
-			worked =
-				true
-		end
+		--==================================================
+		-- PROTEGER O PAINEL
+		--==================================================
+		--
+		-- Enquanto o cursor estiver em cima da interface
+		-- DEAL BLOX, NÃO enviamos mouse1click,
+		-- VirtualInputManager ou VirtualUser.
+		--
+		-- Assim o usuário consegue:
+		--   • trocar abas;
+		--   • clicar em botões;
+		--   • usar scroll;
+		--   • mexer nas configurações.
+		--
+		-- Quando o cursor sai do painel, o auto-click
+		-- físico volta automaticamente.
+		--==================================================
 
-		-- 4. VirtualInputManager.
-		if ClickWithVirtualInput() then
-			worked =
-				true
-		end
+		if
+			not IsMouseOverDealBlox()
+		then
+			if ClickWithExecutor() then
+				worked =
+					true
+			end
 
-		-- 5. VirtualUser como último fallback.
-		if ClickWithVirtualUser() then
-			worked =
-				true
+			if ClickWithVirtualInput() then
+				worked =
+					true
+			end
+
+			if ClickWithVirtualUser() then
+				worked =
+					true
+			end
 		end
 
 		return worked
