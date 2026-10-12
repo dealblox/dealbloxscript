@@ -1,3 +1,7 @@
+-- DEAL BLOX | modules/farm.lua | Correcao de navegacao Tiki -> Submerged
+-- Baseado no arquivo enviado pelo autor em 12/10/2026.
+-- Mantem API Farm.Create(State, Quests, Debug), combate e interface.
+-- IMPORTANTE: A chamada remota do jogo nao foi validada em tempo real.
 --==================================================
 -- DEAL BLOX
 -- MODULES / FARM
@@ -379,98 +383,92 @@ function Farm.Create(
 			nil
 	end
 
-	local function TweenTo(
-		targetCFrame,
-		speedOverride
-	)
-		if
-			not State.Settings.AutoFarm
-		then
+	local function TweenTo(targetCFrame, speedOverride)
+		if not State.Settings.AutoFarm then
+			return false
+		end
+		if typeof(targetCFrame) ~= "CFrame" then
+			Warn("TweenTo: destino inválido")
 			return false
 		end
 
-		local _, _, root =
-			GetCharacter()
-
+		local character, humanoid, root = GetCharacter()
 		if not root then
 			return false
 		end
 
-		local distance =
-			(
-				root.Position
-				-
-				targetCFrame.Position
-			).Magnitude
-
+		local distance = (root.Position - targetCFrame.Position).Magnitude
 		if distance <= 10 then
-			pcall(function()
-				root.CFrame =
-					targetCFrame
-			end)
-
 			return true
 		end
 
 		StopTween()
+		local speed = math.max(
+			tonumber(speedOverride) or tonumber(State.Settings.TweenSpeed) or 350,
+			100
+		)
+		-- Não comprime viagens longas em apenas 15 segundos.
+		local duration = math.max(distance / speed, 0.10)
+		if duration > 180 then
+			Warn("Destino longe demais para uma viagem segura")
+			return false
+		end
 
-		local speed =
-			math.max(
-				speedOverride
-				or
-				State.Settings.TweenSpeed
-				or
-				350,
-				100
-			)
-
-		local duration =
-			math.clamp(
-				distance / speed,
-				0.10,
-				15
-			)
-
-		CurrentTween =
-			TweenService:Create(
+		local ok, tween = pcall(function()
+			return TweenService:Create(
 				root,
-				TweenInfo.new(
-					duration,
-					Enum.EasingStyle.Linear
-				),
-				{
-					CFrame =
-						targetCFrame
-				}
+				TweenInfo.new(duration, Enum.EasingStyle.Linear),
+				{ CFrame = targetCFrame }
 			)
+		end)
+		if not ok or not tween then
+			Warn("Não consegui criar movimento: " .. tostring(tween))
+			return false
+		end
 
-		CurrentTween:Play()
+		CurrentTween = tween
+		tween:Play()
+		local started = tick()
+		local reached = false
 
-		local started =
-			tick()
-
-		while
-			State.Settings.AutoFarm
-			and
-			CurrentTween
-			and
-			CurrentTween.PlaybackState
-				==
-				Enum.PlaybackState.Playing
-		do
-			if
-				tick() - started
-				>
-				duration + 1
-			then
+		while State.Settings.AutoFarm
+			and Environment.DealBloxFarmToken == Token do
+			if Player.Character ~= character
+				or not root.Parent
+				or humanoid.Health <= 0 then
 				break
 			end
 
+			local remaining = (root.Position - targetCFrame.Position).Magnitude
+			if remaining <= 12 then
+				reached = true
+				break
+			end
+			if tween.PlaybackState ~= Enum.PlaybackState.Playing then
+				break
+			end
+			if tick() - started > duration + 2 then
+				break
+			end
 			task.wait(0.05)
 		end
 
-		return
-			State.Settings.AutoFarm
+		-- Nunca retornar sucesso apenas porque o tween terminou.
+		if root.Parent and humanoid.Health > 0
+			and Player.Character == character then
+			reached = reached or
+				(root.Position - targetCFrame.Position).Magnitude <= 12
+		end
+		if CurrentTween == tween then
+			StopTween()
+		end
+
+		if not reached then
+			Warn("Movimento interrompido antes do destino")
+		end
+		return reached
+			and State.Settings.AutoFarm
+			and Environment.DealBloxFarmToken == Token
 	end
 
 	--==================================================
@@ -531,18 +529,15 @@ function Farm.Create(
 		-- Dentro da Submerged não usamos o modo de
 		-- viagem alta. Subir demais lá pode fazer o
 		-- jogo devolver o jogador para Tiki.
-		if
-			IsSubmergedPosition(
-				origin
-			)
-			or
-			IsSubmergedPosition(
-				target
-			)
-		then
-			return TweenTo(
-				targetCFrame
-			)
+		local originSubmerged = IsSubmergedPosition(origin)
+		local targetSubmerged = IsSubmergedPosition(target)
+		if originSubmerged ~= targetSubmerged then
+			State:SetRuntime("Status", "Mudança de área bloqueada")
+			Warn("Não é permitido cruzar diretamente entre superfície e Submerged")
+			return false
+		end
+		if originSubmerged then
+			return TweenTo(targetCFrame)
 		end
 
 		local horizontal =
@@ -735,59 +730,29 @@ function Farm.Create(
 	end
 
 	local function FindSubmarineWorkerOnce()
-		for _, object in ipairs(
-			workspace:GetDescendants()
-		) do
-			if
-				object:IsA(
-					"Model"
-				)
-			then
-				local name =
-					NormalizeName(
-						object.Name
-					)
-
-				if
-					string.find(
-						name,
-						"submarine",
-						1,
-						true
-					)
-					and
-					string.find(
-						name,
-						"worker",
-						1,
-						true
-					)
-				then
-					local part =
-						object:
-						FindFirstChild(
-							"HumanoidRootPart"
-						)
-						or
-						object:
-						FindFirstChild(
-							"Head"
-						)
-						or
-						object:
-						FindFirstChildWhichIsA(
-							"BasePart",
-							true
-						)
-
+		local bestWorker, bestPart = nil, nil
+		local bestDistance = math.huge
+		-- Existem Workers em áreas diferentes; restringimos à Tiki.
+		for _, object in ipairs(workspace:GetDescendants()) do
+			if object:IsA("Model") then
+				local name = NormalizeName(object.Name)
+				if string.find(name, "submarine", 1, true)
+					and string.find(name, "worker", 1, true) then
+					local part = object:FindFirstChild("HumanoidRootPart")
+						or object:FindFirstChild("Head")
+						or object:FindFirstChildWhichIsA("BasePart", true)
 					if part then
-						return object, part
+						local distance =
+							(part.Position - TIKI_SUBMARINE_CFRAME.Position).Magnitude
+						if distance <= 600 and distance < bestDistance then
+							bestWorker, bestPart = object, part
+							bestDistance = distance
+						end
 					end
 				end
 			end
 		end
-
-		return nil, nil
+		return bestWorker, bestPart
 	end
 
 	local function WaitForSubmarineWorker()
@@ -1023,348 +988,190 @@ function Farm.Create(
 	end
 
 	local function MoveToTikiSubmarine()
-		if
-			not State.Settings.AutoFarm
-		then
+		if not State.Settings.AutoFarm then
 			return false
 		end
-
-		local _, _, root =
-			GetCharacter()
-
+		local _, _, root = GetCharacter()
 		if not root then
 			return false
 		end
 
-		State:SetRuntime(
-			"Status",
-			"Indo para Sub Port 01"
-		)
+		State:SetRuntime("Status", "Localizando Sub Port 01")
+		local worker, workerPart = FindSubmarineWorkerOnce()
+		local port = TIKI_SUBMARINE_CFRAME.Position
 
-		-- Primeiro cruza o oceano no alto.
-		local target =
-			TIKI_SUBMARINE_CFRAME.Position
+		-- Já está perto do Worker? Não viaja de volta para o céu.
+		local nearWorker = workerPart
+			and (root.Position - workerPart.Position).Magnitude <= 100
 
-		local highY =
-			math.max(
-				SAFE_OCEAN_HEIGHT,
-				root.Position.Y
-					+
-					LONG_TRAVEL_EXTRA_HEIGHT
-			)
+		if not nearWorker then
+			State:SetRuntime("Status", "Aproximando da Tiki")
+			local approach = CFrame.new(port.X, port.Y + 180, port.Z)
+			if not SafeLongTravel(approach) then
+				Warn("Falha na aproximação da Tiki")
+				return false
+			end
+		end
 
-		local highTarget =
-			CFrame.new(
-				target.X,
-				highY,
-				target.Z
-			)
+		if not State.Settings.AutoFarm then
+			return false
+		end
+		State:SetRuntime("Status", "Procurando Submarine Worker")
+		worker, workerPart = WaitForSubmarineWorker()
 
-		if
-			not SafeLongTravel(
-				highTarget
-			)
-		then
+		if not workerPart then
+			-- Segundo ponto de streaming: aproxima sem mergulhar na água.
+			local retry = CFrame.new(port.X, port.Y + 70, port.Z)
+			if not TweenTo(retry, 200) then
+				return false
+			end
+			worker, workerPart = WaitForSubmarineWorker()
+		end
+
+		if not worker or not workerPart or not workerPart.Parent then
+			State:SetRuntime("Status", "Worker da Tiki não encontrado")
+			Warn("Submarine Worker não carregou; viagem cancelada")
 			return false
 		end
 
-		if
-			not State.Settings.AutoFarm
-		then
+		State:SetRuntime("Status", "Aproximando do Submarine Worker")
+		local destination = CFrame.new(
+			workerPart.Position + Vector3.new(0, WORKER_SAFE_OFFSET, 0)
+		)
+		if not TweenTo(destination, 200) then
 			return false
 		end
 
-		StopTween()
-
-		-- IMPORTANTE:
-		-- Não descemos por Tween. O Sub Port fica abaixo
-		-- da parte alta da Tiki e o Tween estava fazendo
-		-- o personagem tocar a água / zona de retorno.
-		State:SetRuntime(
-			"Status",
-			"Entrando no Sub Port"
-		)
-
-		local _, humanoid,
-			finalRoot =
-				GetCharacter()
-
-		if
-			not humanoid
-			or
-			not finalRoot
-		then
+		task.wait(0.6)
+		local _, humanoid, finalRoot = GetCharacter()
+		if not humanoid or not finalRoot or not workerPart.Parent then
+			return false
+		end
+		local distance = (finalRoot.Position - workerPart.Position).Magnitude
+		Log("Distância do Submarine Worker: " .. string.format("%.1f", distance))
+		if distance > 24 then
+			State:SetRuntime("Status", "Distância inválida do submarino")
+			return false
+		end
+		if humanoid:GetState() == Enum.HumanoidStateType.Swimming then
+			State:SetRuntime("Status", "Entrou na água próximo ao submarino")
+			Warn("Cancelado: personagem entrou na água antes do embarque")
 			return false
 		end
 
-		pcall(function()
-			finalRoot.AssemblyLinearVelocity =
-				Vector3.zero
-
-			finalRoot.AssemblyAngularVelocity =
-				Vector3.zero
-
-			finalRoot.CFrame =
-				TIKI_SUBMARINE_CFRAME
-		end)
-
-		-- O fluxo usado por Auto Farms atuais espera
-		-- o local carregar antes de chamar a Remote.
-		task.wait(
-			2
-		)
-
-		local _, checkHumanoid,
-			checkRoot =
-				GetCharacter()
-
-		if
-			not checkHumanoid
-			or
-			not checkRoot
-		then
-			State:SetRuntime(
-				"Status",
-				"Morreu no Sub Port"
-			)
-
-			return false
-		end
-
-		local distance =
-			(
-				checkRoot.Position
-				-
-				TIKI_SUBMARINE_CFRAME.Position
-			).Magnitude
-
-		Log(
-			"Distância do Sub Port: "
-			..
-			string.format(
-				"%.1f",
-				distance
-			)
-			..
-			" studs"
-		)
-
-		return
-			distance
-			<=
-			80
+		State:SetRuntime("Status", "Pronto para acionar submarino")
+		return State.Settings.AutoFarm
 	end
 
 	--==================================================
 	-- SUBMERGED ISLAND
 	--==================================================
 
-	local function IsInsideSubmerged(
-		QuestData
-	)
-		if
-			not QuestData
-			or
-			not QuestData.RequiresSubmerged
-		then
+	local function IsInsideSubmerged(QuestData)
+		if not QuestData or not QuestData.RequiresSubmerged
+			or typeof(QuestData.QuestPos) ~= "CFrame" then
 			return false
 		end
-
-		local _, _, root =
-			GetCharacter()
-
+		local _, _, root = GetCharacter()
 		if not root then
 			return false
 		end
 
-		-- A área fica muito abaixo do Sea 3 normal.
-		if root.Position.Y < -1000 then
-			return true
+		-- Distância de 10 mil studs não comprovava a entrada na ilha.
+		-- A posição precisa estar na região baixa E próxima da missão.
+		local position = root.Position
+		local quest = QuestData.QuestPos.Position
+		if position.Y >= -500 or quest.Y >= -500 then
+			return false
 		end
-
-		-- Segunda verificação por distância da quest.
-		local distance =
-			(
-				root.Position
-				-
-				QuestData.QuestPos.Position
-			).Magnitude
-
-		return
-			distance
-			<
-			SUBMERGED_DISTANCE_LIMIT
+		return (position - quest).Magnitude <= 4000
 	end
 
-	local function TravelToSubmerged(
-		QuestData
-	)
-		if IsInsideSubmerged(
-			QuestData
-		) then
+	local function TravelToSubmerged(QuestData)
+		if IsInsideSubmerged(QuestData) then
 			return true
 		end
 
-		State:SetRuntime(
-			"Status",
-			"Preparando Submerged"
-		)
-
-		if
-			not MoveToTikiSubmarine()
-		then
-			State:SetSetting(
-				"AutoFarm",
-				false
-			)
-
-			Warning(
-				"Não consegui chegar com segurança ao Sub Port 01."
-			)
-
+		local function Abort(status, message)
+			StopTween()
+			State:SetRuntime("Status", status)
+			State:SetSetting("AutoFarm", false)
+			Warn("[Submerged] " .. message)
+			Warning(message)
 			return false
 		end
 
-		if
-			not State.Settings.AutoFarm
-		then
-			return false
-		end
-
-		local Remote =
-			GetSubmarineRemote()
-
-		if not Remote then
-			State:SetRuntime(
-				"Status",
-				"Remote do submarino não encontrada"
-			)
-
-			State:SetSetting(
-				"AutoFarm",
-				false
-			)
-
-			Warning(
-				"A Remote do Submarine Worker não foi encontrada."
-			)
-
-			return false
-		end
-
-		State:SetRuntime(
-			"Status",
-			"Acionando submarino"
-		)
-
-		local success, result =
-			pcall(function()
-				return Remote:
-					InvokeServer(
-						"TravelToSubmergedIsland"
-					)
-			end)
-
-		if not success then
-			Warn(
-				"Erro do submarino: "
-				..
-				tostring(result)
-			)
-
-			State:SetRuntime(
-				"Status",
-				"Falha ao acionar submarino"
-			)
-
-			State:SetSetting(
-				"AutoFarm",
-				false
-			)
-
-			Warning(
-				"O submarino não respondeu. Auto Farm desligado."
-			)
-
-			return false
-		end
-
-		if result ~= nil then
-			Log(
-				"Resposta do submarino: "
-				..
-				tostring(result)
-			)
-		end
-
-		State:SetRuntime(
-			"Status",
-			"Aguardando Submerged"
-		)
-
-		local started =
-			tick()
-
-		while
-			State.Settings.AutoFarm
-			and
-			tick() - started
-				<
-				10
-		do
-			if IsInsideSubmerged(
-				QuestData
-			) then
-				State:SetRuntime(
-					"Status",
-					"Submerged detectada"
-				)
-
-				Log(
-					"✅ Submerged Island detectada."
-				)
-
-				return true
-			end
-
-			local _, aliveHumanoid =
-				GetCharacter()
-
-			if not aliveHumanoid then
-				State:SetRuntime(
-					"Status",
-					"Morreu tentando entrar"
-				)
-
-				State:SetSetting(
-					"AutoFarm",
-					false
-				)
-
+		State:SetRuntime("Status", "Preparando Submerged")
+		if not MoveToTikiSubmarine() then
+			if not State.Settings.AutoFarm then
 				return false
 			end
-
-			task.wait(
-				0.20
-			)
+			return Abort("Falha ao chegar no Worker",
+				"Não foi possível chegar ao Submarine Worker da Tiki.")
 		end
 
-		-- Sem loop infinito: uma tentativa por ativação.
-		State:SetRuntime(
-			"Status",
-			"Submerged não detectada"
-		)
+		if not State.Settings.AutoFarm then
+			return false
+		end
 
-		State:SetSetting(
-			"AutoFarm",
-			false
-		)
+		local remote = GetSubmarineRemote()
+		if not remote or not remote:IsA("RemoteFunction") then
+			return Abort("Remote do submarino ausente",
+				"RF/SubmarineWorkerSpeak não foi encontrada.")
+		end
 
-		Warning(
-			"O submarino foi acionado, mas a Submerged não foi detectada. Auto Farm desligado."
-		)
+		State:SetRuntime("Status", "Acionando submarino")
+		-- Não bloqueamos o loop caso InvokeServer fique sem resposta.
+		local finished, ok, reply = false, false, nil
+		task.spawn(function()
+			ok, reply = pcall(function()
+				return remote:InvokeServer("TravelToSubmergedIsland")
+			end)
+			finished = true
+		end)
 
-		return false
+		local started = tick()
+		local entered = false
+		State:SetRuntime("Status", "Aguardando Submerged")
+		while State.Settings.AutoFarm
+			and Environment.DealBloxFarmToken == Token
+			and tick() - started < 20 do
+			local _, humanoid, root = GetCharacter()
+			if not humanoid or not root then
+				return Abort("Morreu durante a viagem",
+					"O personagem morreu antes de entrar na Submerged.")
+			end
+			if IsInsideSubmerged(QuestData) then
+				entered = true
+				break
+			end
+			if finished and not ok then
+				return Abort("Erro do submarino", tostring(reply))
+			end
+			if finished and reply == false then
+				return Abort("Viagem recusada", "O servidor recusou a viagem.")
+			end
+			task.wait(0.2)
+		end
+
+		if not State.Settings.AutoFarm
+			or Environment.DealBloxFarmToken ~= Token then
+			return false
+		end
+		if not entered then
+			return Abort("Submerged não detectada",
+				"A viagem foi acionada, mas a chegada não foi confirmada.")
+		end
+
+		State:SetRuntime("Status", "Validando posição na Submerged")
+		task.wait(0.8)
+		if not IsInsideSubmerged(QuestData) then
+			return Abort("Entrada instável",
+				"O personagem saiu da região Submerged após a viagem.")
+		end
+		State:SetRuntime("Status", "Submerged detectada")
+		Log("Submerged confirmada. Quest: " .. tostring(QuestData.Mob))
+		return true
 	end
 
 	local function EnsureQuestArea(
@@ -2526,6 +2333,14 @@ function Farm.Create(
 				break
 			end
 
+			if QuestData.RequiresSubmerged
+				and not IsInsideSubmerged(QuestData) then
+				State:SetRuntime("Status", "Saiu da Submerged")
+				State:SetSetting("AutoFarm", false)
+				Warning("Saiu da Submerged durante o combate.")
+				return
+			end
+
 			local enemyPosition =
 				enemyRoot.Position
 
@@ -2803,7 +2618,7 @@ function Farm.Create(
 				QuestData.Mob
 			)
 
-			MoveTo(
+			local moved = MoveTo(
 				QuestData.MobPos
 					*
 					CFrame.new(
@@ -2825,6 +2640,12 @@ function Farm.Create(
 					)
 			)
 
+			if not moved and QuestData.RequiresSubmerged
+				and State.Settings.AutoFarm then
+				State:SetRuntime("Status", "Falha ao alcançar NPC submerso")
+				State:SetSetting("AutoFarm", false)
+				Warning("Movimentação até o NPC falhou. Auto Farm desligado.")
+			end
 			task.wait(0.7)
 		end
 	end
