@@ -1,4 +1,4 @@
--- DEAL BLOX | modules/farm.lua | Correcao de navegacao Tiki -> Submerged
+-- DEAL BLOX | modules/farm.lua | V3 Submerged + localizacao de NPCs
 -- Baseado no arquivo enviado pelo autor em 12/10/2026.
 -- Mantem API Farm.Create(State, Quests, Debug), combate e interface.
 -- IMPORTANTE: A chamada remota do jogo nao foi validada em tempo real.
@@ -2166,91 +2166,53 @@ function Farm.Create(
 	-- ENCONTRAR NPC
 	--==================================================
 
-	local function FindTarget(
-		QuestData
-	)
-		local Enemies =
-			workspace:
-			FindFirstChild(
-				"Enemies"
-			)
+	local LastNpcReportAt = 0
 
-		if not Enemies then
-			return nil
-		end
+	local function FindTarget(QuestData)
+		local enemiesFolder = workspace:FindFirstChild("Enemies")
+		local _, _, playerRoot = GetCharacter()
+		local wanted = NormalizeName(QuestData.Mob)
+		local closest = nil
+		local closestDistance = math.huge
+		local foundNames = {}
+		local inspected = 0
 
-		local _, _, playerRoot =
-			GetCharacter()
+		if enemiesFolder then
+			for _, enemy in ipairs(enemiesFolder:GetChildren()) do
+				if enemy:IsA("Model") then
+					inspected += 1
+					if #foundNames < 6 then
+						table.insert(foundNames, enemy.Name)
+					end
 
-		local closest =
-			nil
+					local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+					local enemyRoot = enemy:FindFirstChild("HumanoidRootPart")
+					local enemyName = NormalizeName(enemy.Name)
+					local matches = wanted ~= "" and string.find(enemyName, wanted, 1, true) ~= nil
+					local rightArea = not QuestData.RequiresSubmerged
+						or (enemyRoot ~= nil and enemyRoot.Position.Y < -500)
 
-		local closestDistance =
-			math.huge
-
-		local wanted =
-			string.lower(
-				QuestData.Mob
-			)
-
-		for _, enemy in ipairs(
-			Enemies:GetChildren()
-		) do
-			local humanoid =
-				enemy:
-				FindFirstChildOfClass(
-					"Humanoid"
-				)
-
-			local root =
-				enemy:
-				FindFirstChild(
-					"HumanoidRootPart"
-				)
-
-			local matches =
-				string.find(
-					string.lower(
-						enemy.Name
-					),
-					wanted,
-					1,
-					true
-				)
-
-			if
-				matches
-				and
-				humanoid
-				and
-				root
-				and
-				humanoid.Health > 0
-			then
-				local distance =
-					0
-
-				if playerRoot then
-					distance =
-						(
-							playerRoot.Position
-							-
-							root.Position
-						).Magnitude
-				end
-
-				if
-					distance
-					<
-					closestDistance
-				then
-					closest =
-						enemy
-
-					closestDistance =
-						distance
+					if matches and rightArea and humanoid and enemyRoot
+						and humanoid.Health > 0 then
+						local distance = playerRoot
+							and (playerRoot.Position - enemyRoot.Position).Magnitude
+							or 0
+						if distance < closestDistance then
+							closest = enemy
+							closestDistance = distance
+						end
+					end
 				end
 			end
+		end
+
+		-- Quando o mob não aparece, registra quais modelos estão carregados.
+		-- Evita deixar o jogador preso sem explicação.
+		if not closest and tick() - LastNpcReportAt >= 8 then
+			LastNpcReportAt = tick()
+			Warn("NPC '" .. tostring(QuestData.Mob) .. "' não encontrado. "
+				.. "Modelos em Enemies: " .. tostring(inspected)
+				.. ". Exemplos: " .. table.concat(foundNames, ", "))
 		end
 
 		return closest
@@ -2282,6 +2244,28 @@ function Farm.Create(
 			not enemyRoot
 		then
 			return
+		end
+
+		-- Um NPC encontrado pode estar longe: não iniciar combate
+		-- antes de chegar até ele na mesma região.
+		local _, _, startingRoot = GetCharacter()
+		if not startingRoot then
+			return
+		end
+		local approachHeight = math.clamp(
+			tonumber(State.Settings.FarmHeight) or 9, 8, 12
+		)
+		local approachPosition = enemyRoot.Position
+			+ Vector3.new(0, approachHeight, 4)
+		local firstDistance = (startingRoot.Position - approachPosition).Magnitude
+		if firstDistance > 25 then
+			State:SetRuntime("Status", "Indo até " .. tostring(QuestData.Mob))
+			Log("Aproximando do alvo; distância: "
+				.. string.format("%.1f", firstDistance) .. " studs")
+			if not MoveTo(CFrame.new(approachPosition)) then
+				Warn("Não foi possível chegar perto de " .. tostring(QuestData.Mob))
+				return
+			end
 		end
 
 		State:SetRuntime(
@@ -2390,6 +2374,19 @@ function Farm.Create(
 						9,
 						12
 					)
+			end
+
+			-- Se o alvo se afastar, aproxime primeiro, sem dar
+			-- um teleporte gigante em cada ciclo do combate.
+			local distanceToEnemy =
+				(playerRoot.Position - enemyPosition).Magnitude
+			if distanceToEnemy > 40 then
+				State:SetRuntime("Status", "Reaproximando do NPC")
+				if not MoveTo(CFrame.new(
+					enemyPosition + Vector3.new(0, height, 4)
+				)) then
+					return
+				end
 			end
 
 			-- Fica acima e um pouco atrás do NPC,
@@ -2585,68 +2582,70 @@ function Farm.Create(
 			return
 		end
 
-		if
-			not HasCorrectQuest(
-				QuestData
-			)
-		then
-			StartQuest(
-				QuestData
-			)
-
+		if not HasCorrectQuest(QuestData) then
+			local started = StartQuest(QuestData)
+			if started and not HasCorrectQuest(QuestData) then
+				State:SetRuntime("Status", "Aguardando missão aparecer na tela")
+				Warn("StartQuest respondeu, mas título da missão não confirmou: "
+					.. tostring(QuestData.Mob))
+			end
 			return
 		end
 
-		local Target =
-			FindTarget(
-				QuestData
-			)
-
+		-- Após aceitar a missão, localizar os mobs que já carregaram.
+		local Target = FindTarget(QuestData)
 		if Target then
-			Fight(
-				Target,
-				QuestData
-			)
-		else
-			State:SetRuntime(
-				"Status",
-				"Procurando NPC"
-			)
+			Fight(Target, QuestData)
+			return
+		end
 
-			State:SetRuntime(
-				"Target",
-				QuestData.Mob
-			)
+		-- Se os inimigos ainda não carregaram, vá até a região
+		-- de spawn declarada em data/quests.lua e procure outra vez.
+		State:SetRuntime("Target", tostring(QuestData.Mob))
+		if typeof(QuestData.MobPos) ~= "CFrame" then
+			State:SetRuntime("Status", "Spawn do NPC não configurado")
+			State:SetSetting("AutoFarm", false)
+			Warning("MobPos inválido em data/quests.lua para "
+				.. tostring(QuestData.Mob))
+			return
+		end
 
-			local moved = MoveTo(
-				QuestData.MobPos
-					*
-					CFrame.new(
-						0,
-						QuestData.RequiresSubmerged
-							and
-							8
-							or
-							math.clamp(
-								tonumber(
-									State.Settings.FarmHeight
-								)
-								or
-								8,
-								5,
-								12
-							),
-						0
-					)
-			)
+		local mobHeight = QuestData.RequiresSubmerged and 8
+			or math.clamp(tonumber(State.Settings.FarmHeight) or 8, 5, 12)
+		local destination = QuestData.MobPos * CFrame.new(0, mobHeight, 0)
+		local _, _, currentRoot = GetCharacter()
+		if not currentRoot then
+			return
+		end
 
-			if not moved and QuestData.RequiresSubmerged
-				and State.Settings.AutoFarm then
-				State:SetRuntime("Status", "Falha ao alcançar NPC submerso")
-				State:SetSetting("AutoFarm", false)
-				Warning("Movimentação até o NPC falhou. Auto Farm desligado.")
+		local distance = (currentRoot.Position - destination.Position).Magnitude
+		if distance > 25 then
+			State:SetRuntime("Status", "Indo ao spawn de " .. tostring(QuestData.Mob))
+			Log("Movendo para MobPos: " .. tostring(QuestData.MobPos.Position)
+				.. " (distância " .. string.format("%.1f", distance) .. " studs)")
+			if not MoveTo(destination) then
+				State:SetRuntime("Status", "Falha ao chegar ao spawn do NPC")
+				if QuestData.RequiresSubmerged and State.Settings.AutoFarm then
+					State:SetSetting("AutoFarm", false)
+					Warning("Movimentação ao spawn falhou. Veja o log do Deal Blox.")
+				end
+				return
 			end
-			task.wait(0.7)
+		end
+
+		State:SetRuntime("Status", "Procurando NPC perto do spawn")
+		task.wait(1.0) -- permite que os modelos apareçam em workspace.Enemies
+		if not State.Settings.AutoFarm then
+			return
+		end
+
+		Target = FindTarget(QuestData)
+		if Target then
+			State:SetRuntime("Status", "NPC encontrado: iniciando combate")
+			Fight(Target, QuestData)
+		else
+			State:SetRuntime("Status", "Aguardando spawn: " .. tostring(QuestData.Mob))
+			task.wait(0.8)
 		end
 	end
 
